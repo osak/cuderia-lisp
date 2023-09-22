@@ -1,0 +1,69 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.35.1.
+--
+-- see: https://github.com/sol/hpack
+
+name:           cuderia-lisp
+version:        0.1.0.0
+description:    Please see the README on GitHub at <https://github.com/osak/cuderia-lisp#readme>
+homepage:       https://github.com/osak/cuderia-lisp#readme
+bug-reports:    https://github.com/osak/cuderia-lisp/issues
+author:         Osamu Koga (osa_k)
+maintainer:     osak.63@gmail.com
+copyright:      (C) Osamu Koga
+license:        BSD3
+license-file:   LICENSE
+build-type:     Simple
+extra-source-files:
+    README.md
+    CHANGELOG.md
+
+source-repository head
+  type: git
+  location: https://github.com/osak/cuderia-lisp
+
+library
+  exposed-modules:
+      Cuderia.Syntax.Parser
+      Cuderia.Syntax.Token
+      Cuderia.Syntax.Unparser
+  other-modules:
+      Paths_cuderia_lisp
+  hs-source-dirs:
+      src
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
+  build-depends:
+      base >=4.7 && <5
+    , parsec
+    , text
+  default-language: Haskell2010
+
+executable cuderia-lisp-exe
+  main-is: Main.hs
+  other-modules:
+      Paths_cuderia_lisp
+  hs-source-dirs:
+      app
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      base >=4.7 && <5
+    , cuderia-lisp
+  default-language: Haskell2010
+
+test-suite cuderia-lisp-test
+  type: exitcode-stdio-1.0
+  main-is: Spec.hs
+  other-modules:
+      Cuderia.Syntax.ParserSpec
+      Paths_cuderia_lisp
+  hs-source-dirs:
+      test
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      base >=4.7 && <5
+    , cuderia-lisp
+    , tasty
+    , tasty-hunit
+    , text
+  default-language: Haskell2010
