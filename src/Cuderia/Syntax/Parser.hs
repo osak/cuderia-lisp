@@ -1,6 +1,7 @@
 module Cuderia.Syntax.Parser
   ( Cuderia.Syntax.Parser.parse,
     Cuderia.Syntax.Parser.ParseError,
+    Cuderia.Syntax.Parser.errorPos,
     Identifier(..),
     Construct(..),
     SExpr(..)
@@ -9,9 +10,11 @@ where
 
 import Data.Text qualified as T
 import Text.Parsec as Parsec
-import Text.Parsec.Error
 
-type ParseError = Text.Parsec.Error.ParseError
+type ParseError = Parsec.ParseError
+errorPos :: Parsec.ParseError -> (Int, Int)
+errorPos err = let pos = Parsec.errorPos err
+    in (sourceLine pos, sourceColumn pos)
 
 newtype Identifier = Identifier T.Text
   deriving (Show)

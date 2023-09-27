@@ -14,7 +14,7 @@ unparseConstruct (SExpr e) = unparseOne e
 unparseConstruct (Integer i) = T.pack $ show i
 
 unparseOne :: SExpr -> T.Text
-unparseOne (App id args) = "(" <> (unparseIdentifier id) <> " " <> (T.intercalate " " $ map unparseConstruct args) <> ")"
+unparseOne (App id args) = "(" <> (unparseIdentifier id) <> T.concat (map (T.append " " . unparseConstruct) args) <> ")"
 
 unparseExprs :: T.Text -> [SExpr] -> T.Text
 unparseExprs joiner exprs = T.intercalate joiner $ map unparseOne exprs
