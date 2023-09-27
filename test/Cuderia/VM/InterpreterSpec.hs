@@ -24,6 +24,16 @@ shouldSuccess name src eval = testCase name $ do
     Right val -> eval val
     Left err -> assertFailure $ "Interpreter failed: " ++ show err
 
+shouldDoMath :: String -> T.Text -> Int -> TestTree
+shouldDoMath name src expected =
+  shouldSuccess
+    name
+    src
+    ( \v -> case v of
+        IntValue i -> expected @=? i
+        other -> assertFailure $ "Interpreter returned wrong value: " ++ display other
+    )
+
 shouldFail :: String -> T.Text -> (CuderiaError -> Assertion) -> TestTree
 shouldFail name src eval = testCase name $ do
   let sexpr = fromRight undefined $ parse name src
@@ -37,13 +47,9 @@ tests :: TestTree
 tests =
   testGroup
     "Interpreter"
-    [ shouldSuccess
-        "Addition"
-        "(+ 1 2 3)"
-        ( \v -> case v of
-            IntValue i -> 6 @=? i
-            other -> assertFailure $ "Interpreter returned wrong value: " ++ display other
-        ),
+    [ shouldDoMath "Addition" "(+ 1 2 3)" 6,
+      shouldDoMath "Subtraction" "(- 10 3 2)" 5,
+      shouldDoMath "Multiplication" "(* 1 2 3 4 5)" 120,
       shouldFail
         "Adding non-number"
         "(+ 1 \"foo\")"

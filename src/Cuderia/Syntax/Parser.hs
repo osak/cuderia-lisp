@@ -30,7 +30,7 @@ newtype SExpr = SExpr [Construct]
   deriving (Show)
 
 idLetter :: Parsec T.Text () Char
-idLetter = letter <|> char '+'
+idLetter = letter <|> oneOf "+-*"
 
 identifier :: Parsec T.Text () Identifier
 identifier = do
