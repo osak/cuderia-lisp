@@ -12,6 +12,7 @@ unparseConstruct :: Construct -> T.Text
 unparseConstruct (Var v) = unparseIdentifier v
 unparseConstruct (Expr e) = unparseSExpr e
 unparseConstruct (Integer i) = T.pack $ show i
+unparseConstruct (String s) = "\"" <> s <> "\""
 
 unparseSExpr :: SExpr -> T.Text
 unparseSExpr (SExpr constructs) = "(" <> T.intercalate " " (map unparseConstruct constructs) <> ")"

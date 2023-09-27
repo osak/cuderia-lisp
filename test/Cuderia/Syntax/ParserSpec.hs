@@ -35,6 +35,7 @@ tests =
       parserTestCase "Ignore spaces" "(  cons  foo  bar )" "(cons foo bar)",
       parserTestCase "No arguments" "(nil)" "(nil)",
       parserTestCase "Plus" "(+ 1 2 3)" "(+ 1 2 3)",
+      parserTestCase "String" "(\"hello\")" "(\"hello\")",
       parserFailureCase "Unclosng paren" "(cons 1 2" (1, 10),
       parserFailureCase "Unmatching paren" ")cons 1 2" (1, 1),
       parserFailureCase "Invalid number literal" "(const 123foo)" (1, 12)

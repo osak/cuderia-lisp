@@ -3,6 +3,7 @@
 module Cuderia.VM.Interpreter (
     Interpreter,
     Value(..),
+    CuderiaError(..),
     display,
     newInterpreter,
     runInterpreter
@@ -10,15 +11,18 @@ module Cuderia.VM.Interpreter (
 
 import Cuderia.Syntax.Parser as P
 import Data.Array
+import Data.Text qualified as T
 
 data Value e
   = Nil
   | IntValue Int
+  | StringValue T.Text
   | CellRef e Int
 
 display :: Value e -> String
 display Nil = "(nil)"
 display (IntValue i) = show i
+display (StringValue s) = show s
 display (CellRef _ i) = "(ref to " ++ show i ++ ")"
 
 intValue :: Value e -> Int
@@ -49,7 +53,7 @@ apply ident args = case ident of
           val <- evaluateConstruct v
           case val of
             IntValue i -> pure $ IntValue (intValue cur + i)
-            _ -> Left $ InvalidInvocationError "Not a number"
+            _ -> Left $ InvalidInvocationError $ display val ++ " is not a number"
       )
       (Right (IntValue 0))
       args
@@ -57,7 +61,8 @@ apply ident args = case ident of
 
 evaluateConstruct :: Construct -> Either CuderiaError (Value e)
 evaluateConstruct (Integer i) = Right $ IntValue i
-evaluateConstruct _ = undefined
+evaluateConstruct (String s) = Right $ StringValue s
+evaluateConstruct _ = Left $ InvalidInvocationError "Not supported"
 
 evaluateSExpr :: SExpr -> Either CuderiaError (Value e)
 evaluateSExpr (SExpr []) = Right Nil

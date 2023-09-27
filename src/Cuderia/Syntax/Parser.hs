@@ -9,7 +9,7 @@ module Cuderia.Syntax.Parser
 where
 
 import Data.Text qualified as T
-import Text.Parsec as Parsec
+import Text.Parsec as Parsec hiding (string)
 
 type ParseError = Parsec.ParseError
 errorPos :: Parsec.ParseError -> (Int, Int)
@@ -22,6 +22,7 @@ newtype Identifier = Identifier T.Text
 data Construct
   = Var Identifier
   | Integer Int
+  | String T.Text
   | Expr SExpr
   deriving (Show)
 
@@ -47,8 +48,15 @@ integer = do
     Just '-' -> pure $ Integer (-absValue)
     _ -> pure $ Integer absValue
 
+string :: Parsec T.Text () Construct
+string = do
+  _ <- char '"'
+  letters <- many (noneOf "\"")
+  _ <- char '"'
+  pure . String $ T.pack letters
+
 construct :: Parsec T.Text () Construct
-construct = expr <|> var <|> integer
+construct = expr <|> var <|> integer <|> string
   where
     expr = spaces >> fmap Expr sexpr
     var = spaces >> fmap Var identifier
