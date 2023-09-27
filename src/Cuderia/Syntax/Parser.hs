@@ -22,11 +22,10 @@ newtype Identifier = Identifier T.Text
 data Construct
   = Var Identifier
   | Integer Int
-  | SExpr SExpr
+  | Expr SExpr
   deriving (Show)
 
-data SExpr
-  = App Identifier [Construct]
+newtype SExpr = SExpr [Construct]
   deriving (Show)
 
 identifier :: Parsec T.Text () Identifier
@@ -46,19 +45,17 @@ integer = do
     _ -> pure $ Integer absValue
 
 construct :: Parsec T.Text () Construct
-construct = csexpr <|> var <|> integer
+construct = expr <|> var <|> integer
   where
-    csexpr = spaces >> fmap SExpr sexpr
+    expr = spaces >> fmap Expr sexpr
     var = spaces >> fmap Var identifier
 
 sexpr :: Parsec T.Text () SExpr
 sexpr = do
   spaces
   between (char '(' >> spaces) (char ')') $ do
-    f <- identifier
-    spaces
-    args <- many (construct <* spaces)
-    pure $ App f args
+    constructs <- many (construct <* spaces)
+    pure $ SExpr constructs
 
 program :: Parsec T.Text () [SExpr]
 program = do

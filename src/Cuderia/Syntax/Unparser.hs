@@ -10,14 +10,14 @@ unparseIdentifier (Identifier i) = i
 
 unparseConstruct :: Construct -> T.Text
 unparseConstruct (Var v) = unparseIdentifier v
-unparseConstruct (SExpr e) = unparseOne e
+unparseConstruct (Expr e) = unparseSExpr e
 unparseConstruct (Integer i) = T.pack $ show i
 
-unparseOne :: SExpr -> T.Text
-unparseOne (App id args) = "(" <> (unparseIdentifier id) <> T.concat (map (T.append " " . unparseConstruct) args) <> ")"
+unparseSExpr :: SExpr -> T.Text
+unparseSExpr (SExpr constructs) = "(" <> T.intercalate " " (map unparseConstruct constructs) <> ")"
 
 unparseExprs :: T.Text -> [SExpr] -> T.Text
-unparseExprs joiner exprs = T.intercalate joiner $ map unparseOne exprs
+unparseExprs joiner exprs = T.intercalate joiner $ map unparseSExpr exprs
 
 unparse :: [SExpr] -> T.Text
 unparse = unparseExprs "\n"
