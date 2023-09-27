@@ -1,9 +1,9 @@
 module Cuderia.Syntax.Parser
   ( Cuderia.Syntax.Parser.parse,
     Cuderia.Syntax.Parser.ParseError,
-    Identifier (..),
-    Construct (..),
-    SExpr (..),
+    Identifier(..),
+    Construct(..),
+    SExpr(..)
   )
 where
 
@@ -40,10 +40,10 @@ integer = do
   let absValue = read digits :: Int
   case minus of
     Just '-' -> pure $ Integer (-absValue)
-    Nothing -> pure $ Integer absValue
+    _ -> pure $ Integer absValue
 
 construct :: Parsec T.Text () Construct
-construct = try csexpr <|> var <|> integer
+construct = csexpr <|> var <|> integer
   where
     csexpr = spaces >> fmap SExpr sexpr
     var = spaces >> fmap Var identifier
