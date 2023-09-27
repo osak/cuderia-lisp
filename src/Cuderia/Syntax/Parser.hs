@@ -7,7 +7,7 @@ where
 import Cuderia.Syntax.Token
 import Data.Text qualified as T
 import Text.Parsec as Parsec
-import Text.Parsec.Error qualified
+import Text.Parsec.Error
 
 type ParseError = Text.Parsec.Error.ParseError
 
