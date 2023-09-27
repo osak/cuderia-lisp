@@ -27,7 +27,6 @@ library
   exposed-modules:
       Cuderia.Syntax.Lexer
       Cuderia.Syntax.Parser
-      Cuderia.Syntax.Token
       Cuderia.Syntax.Unparser
   other-modules:
       Paths_cuderia_lisp

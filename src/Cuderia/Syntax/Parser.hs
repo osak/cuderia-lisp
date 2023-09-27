@@ -1,26 +1,49 @@
 module Cuderia.Syntax.Parser
   ( Cuderia.Syntax.Parser.parse,
     Cuderia.Syntax.Parser.ParseError,
+    Identifier (..),
+    Construct (..),
+    SExpr (..),
   )
 where
 
-import Cuderia.Syntax.Token
 import Data.Text qualified as T
 import Text.Parsec as Parsec
 import Text.Parsec.Error
 
 type ParseError = Text.Parsec.Error.ParseError
 
-idChar :: Parsec T.Text () Char
-idChar = letter <|> digit
+newtype Identifier = Identifier T.Text
+  deriving (Show)
+
+data Construct
+  = Var Identifier
+  | Integer Int
+  | SExpr SExpr
+  deriving (Show)
+
+data SExpr
+  = App Identifier [Construct]
+  deriving (Show)
 
 identifier :: Parsec T.Text () Identifier
 identifier = do
-  chars <- many1 idChar
-  pure $ Identifier (T.pack chars)
+  first <- letter
+  rest <- many (letter <|> digit)
+  pure $ Identifier (T.singleton first <> T.pack rest)
+
+integer :: Parsec T.Text () Construct
+integer = do
+  minus <- optionMaybe (char '-')
+  digits <- many1 digit
+  notFollowedBy letter
+  let absValue = read digits :: Int
+  case minus of
+    Just '-' -> pure $ Integer (-absValue)
+    Nothing -> pure $ Integer absValue
 
 construct :: Parsec T.Text () Construct
-construct = try csexpr <|> var
+construct = try csexpr <|> var <|> integer
   where
     csexpr = spaces >> fmap SExpr sexpr
     var = spaces >> fmap Var identifier
@@ -28,7 +51,7 @@ construct = try csexpr <|> var
 sexpr :: Parsec T.Text () SExpr
 sexpr = do
   spaces
-  between (char '(' >> spaces) (spaces >> char ')') $ do
+  between (char '(' >> spaces) (char ')') $ do
     f <- identifier
     spaces
     args <- many (construct <* spaces)

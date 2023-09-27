@@ -6,7 +6,6 @@ module Cuderia.Syntax.ParserSpec
 where
 
 import Cuderia.Syntax.Parser
-import Cuderia.Syntax.Token
 import Cuderia.Syntax.Unparser
 import Data.Text qualified as T
 import Test.Tasty
@@ -25,5 +24,6 @@ tests =
     "Parser tests"
     [ parserTestCase "Simple" "(cons 1 2)" "(cons 1 2)",
       parserTestCase "Nested" "(cons (cons 1 2) 3)" "(cons (cons 1 2) 3)",
+      parserTestCase "Negative numbers" "(cons (cons -1 -2) -3)" "(cons (cons -1 -2) -3)",
       parserTestCase "Ignore spaces" "(  cons  foo  bar )" "(cons foo bar)"
     ]
