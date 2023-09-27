@@ -23,6 +23,7 @@ data Construct
   = Var Identifier
   | Integer Int
   | String T.Text
+  | Slot Int
   | Expr SExpr
   deriving (Show)
 
@@ -56,10 +57,14 @@ string = do
   pure . String $ T.pack letters
 
 construct :: Parsec T.Text () Construct
-construct = expr <|> var <|> integer <|> string
+construct = expr <|> var <|> integer <|> string <|> slot
   where
-    expr = spaces >> fmap Expr sexpr
-    var = spaces >> fmap Var identifier
+    expr = fmap Expr sexpr
+    var = fmap Var identifier
+    slot = do
+      _ <- char '\''
+      (Integer i) <- integer
+      pure $ Slot i
 
 sexpr :: Parsec T.Text () SExpr
 sexpr = do
