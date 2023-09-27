@@ -28,13 +28,15 @@ library
       Cuderia.Syntax.Lexer
       Cuderia.Syntax.Parser
       Cuderia.Syntax.Unparser
+      Cuderia.VM.Interpreter
   other-modules:
       Paths_cuderia_lisp
   hs-source-dirs:
       src
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
   build-depends:
-      base >=4.7 && <5
+      array
+    , base >=4.7 && <5
     , parsec
     , text
   default-language: GHC2021
@@ -57,6 +59,7 @@ test-suite cuderia-lisp-test
   other-modules:
       Cuderia.Syntax.LexerSpec
       Cuderia.Syntax.ParserSpec
+      Cuderia.VM.InterpreterSpec
       Paths_cuderia_lisp
   hs-source-dirs:
       test

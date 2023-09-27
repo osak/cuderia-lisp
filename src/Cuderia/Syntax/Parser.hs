@@ -28,10 +28,13 @@ data Construct
 newtype SExpr = SExpr [Construct]
   deriving (Show)
 
+idLetter :: Parsec T.Text () Char
+idLetter = letter <|> char '+'
+
 identifier :: Parsec T.Text () Identifier
 identifier = do
-  first <- letter
-  rest <- many (letter <|> digit)
+  first <- idLetter
+  rest <- many (idLetter <|> digit)
   pure $ Identifier (T.singleton first <> T.pack rest)
 
 integer :: Parsec T.Text () Construct
