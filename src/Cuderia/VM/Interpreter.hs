@@ -47,8 +47,8 @@ newtype Environment a = Environment {runEnvironment :: EnvironmentRep -> (Enviro
 getSlot :: Int -> Environment Value
 getSlot slot = Environment $ \rep -> (rep, Just $ slots rep ! slot)
 
-setSlot :: Int -> Value -> Environment ()
-setSlot slot val = Environment $ \rep -> (EnvironmentRep (slots rep // [(slot, val)]) (currentError rep), Nothing)
+setSlot :: Int -> Value -> Environment Value
+setSlot slot val = Environment $ \rep -> (EnvironmentRep (slots rep // [(slot, val)]) (currentError rep), Just val)
 
 raise :: CuderiaError -> Environment a
 raise err = Environment $ \rep -> (EnvironmentRep (slots rep) (Just err), Nothing)
@@ -64,10 +64,10 @@ instance Monad Environment where
       let (r_1, maybeV) = runEnvironment a r
        in case maybeV of
             Nothing -> (r_1, Nothing)
-            Just v -> runEnvironment (f v) r
+            Just v -> runEnvironment (f v) r_1
 
 instance Functor Environment where
-  fmap fab ma = do fab <$> ma
+  fmap fab ma = do { a <- ma; return (fab a) }
 
 instance Applicative Environment where
   pure a = do return a
@@ -104,9 +104,14 @@ foldInts f (c : cs) = fmap IntValue result
 
 apply :: Identifier -> [Construct] -> Environment Value
 apply ident args = case ident of
-  Identifier "+" -> foldInts (+) args
+  Identifier "+" ->  foldInts (+) args
   Identifier "-" -> foldInts (-) args
   Identifier "*" -> foldInts (*) args
+  Identifier "set!" ->
+    let ((Slot slot):construct:_) = args
+    in do
+        val <- evaluateConstruct construct
+        setSlot slot val
   _ -> undefined
 
 evaluateConstruct :: Construct -> Environment Value
