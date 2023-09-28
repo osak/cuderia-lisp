@@ -6,14 +6,17 @@ module Cuderia.VM.Interpreter
     CuderiaError (..),
     display,
     interpret,
+    newInterpreter,
+    runInterpreter
   )
 where
 
+import Control.Monad (forM_)
 import Cuderia.Syntax.Parser as P
 import Data.Array
 import Data.Maybe
 import Data.Text qualified as T
-import Control.Monad (forM_)
+import Foreign.C (errnoToIOError)
 
 data Value
   = Nil
@@ -68,13 +71,25 @@ instance Monad Environment where
             Just v -> runEnvironment (f v) r_1
 
 instance Functor Environment where
-  fmap fab ma = do { a <- ma; return (fab a) }
+  fmap fab ma = do a <- ma; return (fab a)
 
 instance Applicative Environment where
   pure a = do return a
   mfab <*> ma = do fab <- mfab; fab <$> ma
 
-newtype Interpreter = Interpreter {runInterpreter :: SExpr -> Either CuderiaError Value}
+newtype Interpreter = Interpreter {environmentRep :: EnvironmentRep}
+
+newInterpreter :: Interpreter
+newInterpreter = Interpreter newEnvironmentRep
+
+runInterpreter :: Interpreter -> SExpr -> (Interpreter, Either CuderiaError Value)
+runInterpreter ip sexpr =
+  let (newrep, ret) = runEnvironment (evaluateSExpr sexpr) (environmentRep ip)
+   in ( Interpreter newrep,
+        case currentError newrep of
+          Just err -> Left err
+          Nothing -> Right $ fromMaybe Nil ret
+      )
 
 interpret :: SExpr -> Either CuderiaError Value
 interpret sexpr =
@@ -105,17 +120,17 @@ foldInts f (c : cs) = fmap IntValue result
 
 apply :: Identifier -> [Construct] -> Environment Value
 apply ident args = case ident of
-  Identifier "+" ->  foldInts (+) args
+  Identifier "+" -> foldInts (+) args
   Identifier "-" -> foldInts (-) args
   Identifier "*" -> foldInts (*) args
   Identifier "set!" ->
-    let ((Slot slot):construct:_) = args
-    in do
-        val <- evaluateConstruct construct
-        setSlot slot val
+    let ((Slot slot) : construct : _) = args
+     in do
+          val <- evaluateConstruct construct
+          setSlot slot val
   Identifier "get!" ->
-    let ((Slot slot):_) = args
-    in getSlot slot
+    let ((Slot slot) : _) = args
+     in getSlot slot
   Identifier "do" -> do
     results <- mapM evaluateConstruct args
     pure $ last results

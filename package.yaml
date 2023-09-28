@@ -52,6 +52,7 @@ executables:
     - -with-rtsopts=-N
     dependencies:
     - cuderia-lisp
+    - text
 
 tests:
   cuderia-lisp-test:
