@@ -14,8 +14,8 @@ import Test.Tasty.HUnit
 
 shouldSuccess :: String -> T.Text -> (Value -> Assertion) -> TestTree
 shouldSuccess name src eval = testCase name $ do
-  let sexpr = fromRight undefined $ parse name src
-  let result = interpret (head sexpr)
+  let program = fromRight undefined $ parse name src
+  let (_, result) = runInterpreter newInterpreter program
   case result of
     Right val -> eval val
     Left err -> assertFailure $ "Interpreter failed: " ++ show err
@@ -32,8 +32,8 @@ shouldDoMath name src expected =
 
 shouldFail :: String -> T.Text -> (CuderiaError -> Assertion) -> TestTree
 shouldFail name src eval = testCase name $ do
-  let sexpr = fromRight undefined $ parse name src
-  let result = interpret (head sexpr)
+  let program = fromRight undefined $ parse name src
+  let (_, result) = runInterpreter newInterpreter program
   case result of
     Right val -> assertFailure $ "Interpreter succeeded with " ++ display val ++ " - should have failed"
     Left err -> eval err

@@ -4,7 +4,8 @@ module Cuderia.Syntax.Parser
     Cuderia.Syntax.Parser.errorPos,
     Identifier(..),
     Construct(..),
-    SExpr(..)
+    SExpr(..),
+    Program(..)
   )
 where
 
@@ -30,16 +31,23 @@ data Construct
 newtype SExpr = SExpr [Construct]
   deriving (Show)
 
-idLetter :: Parsec T.Text () Char
+data Program = Program { exprs :: [SExpr] }
+  deriving (Show)
+
+data ParserState = ParserState ()
+
+type CuderiaParsec a = Parsec T.Text ParserState a
+
+idLetter :: CuderiaParsec Char
 idLetter = letter <|> oneOf "+-*!"
 
-identifier :: Parsec T.Text () Identifier
+identifier :: CuderiaParsec Identifier
 identifier = do
   first <- idLetter
   rest <- many (idLetter <|> digit)
   pure $ Identifier (T.singleton first <> T.pack rest)
 
-integer :: Parsec T.Text () Construct
+integer :: CuderiaParsec Construct
 integer = do
   minus <- optionMaybe (char '-')
   digits <- many1 digit
@@ -49,14 +57,14 @@ integer = do
     Just '-' -> pure $ Integer (-absValue)
     _ -> pure $ Integer absValue
 
-string :: Parsec T.Text () Construct
+string :: CuderiaParsec Construct
 string = do
   _ <- char '"'
   letters <- many (noneOf "\"")
   _ <- char '"'
   pure . String $ T.pack letters
 
-construct :: Parsec T.Text () Construct
+construct :: CuderiaParsec Construct
 construct = expr <|> var <|> integer <|> string <|> slot
   where
     expr = fmap Expr sexpr
@@ -66,20 +74,20 @@ construct = expr <|> var <|> integer <|> string <|> slot
       (Integer i) <- integer
       pure $ Slot i
 
-sexpr :: Parsec T.Text () SExpr
+sexpr :: CuderiaParsec SExpr
 sexpr = do
   spaces
   between (char '(' >> spaces) (char ')') $ do
     constructs <- many (construct <* spaces)
     pure $ SExpr constructs
 
-program :: Parsec T.Text () [SExpr]
+program :: CuderiaParsec Program
 program = do
   spaces
   exprs <- many sexpr
   spaces
   eof
-  pure exprs
+  pure $ Program exprs
 
-parse :: String -> T.Text -> Either Cuderia.Syntax.Parser.ParseError [SExpr]
-parse name t = Parsec.runParser program () name t
+parse :: String -> T.Text -> Either Cuderia.Syntax.Parser.ParseError Program
+parse name t = Parsec.runParser program (ParserState ()) name t

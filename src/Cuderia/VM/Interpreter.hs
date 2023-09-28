@@ -11,12 +11,11 @@ module Cuderia.VM.Interpreter
   )
 where
 
-import Control.Monad (forM_)
 import Cuderia.Syntax.Parser as P
 import Data.Array
 import Data.Maybe
 import Data.Text qualified as T
-import Foreign.C (errnoToIOError)
+import Control.Monad
 
 data Value
   = Nil
@@ -82,15 +81,21 @@ newtype Interpreter = Interpreter {environmentRep :: EnvironmentRep}
 newInterpreter :: Interpreter
 newInterpreter = Interpreter newEnvironmentRep
 
-runInterpreter :: Interpreter -> SExpr -> (Interpreter, Either CuderiaError Value)
-runInterpreter ip sexpr =
-  let (newrep, ret) = runEnvironment (evaluateSExpr sexpr) (environmentRep ip)
-   in ( Interpreter newrep,
-        case currentError newrep of
-          Just err -> Left err
-          Nothing -> Right $ fromMaybe Nil ret
-      )
-
+runInterpreter :: Interpreter -> Program -> (Interpreter, Either CuderiaError Value)
+runInterpreter ip program = case run of
+    Left (rep, err) -> (Interpreter rep, Left err)
+    Right (rep, val) -> (Interpreter rep, Right val)
+  where
+    run :: Either (EnvironmentRep, CuderiaError) (EnvironmentRep, Value)
+    run = foldM (\(rep, _) sexpr -> do
+        let (newrep, ret) = runEnvironment (evaluateSExpr sexpr) rep
+        case ret of
+            Just x -> Right (newrep, x)
+            Nothing -> Left (newrep, fromJust $ currentError newrep)
+        )
+        (environmentRep ip, Nil)
+        (exprs program)
+  
 interpret :: SExpr -> Either CuderiaError Value
 interpret sexpr =
   let (envrep, ret) = runEnvironment (evaluateSExpr sexpr) newEnvironmentRep

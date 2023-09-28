@@ -41,6 +41,7 @@ library:
   - array
   - parsec
   - text
+  - containers
 
 executables:
   cuderia-lisp-exe:

@@ -14,15 +14,15 @@ import Test.Tasty.HUnit
 parserTestCase :: String -> T.Text -> T.Text -> TestTree
 parserTestCase name src expected = testCase name $ evaluate (parse name src)
   where
-    evaluate :: Either ParseError [SExpr] -> Assertion
-    evaluate (Right ast) = expected @=? unparse ast
+    evaluate :: Either ParseError Program -> Assertion
+    evaluate (Right program) = expected @=? unparseProgram program
     evaluate (Left err) = assertFailure $ "Parse error: " <> show err
 
 parserFailureCase :: String -> T.Text -> (Int, Int) -> TestTree
 parserFailureCase name src pos = testCase name $ evaluate (parse name src)
   where
-    evaluate :: Either ParseError [SExpr] -> Assertion
-    evaluate (Right ast) = assertFailure $ "Parser succeeded with " ++ (show ast) ++ " - should have failed"
+    evaluate :: Either ParseError Program -> Assertion
+    evaluate (Right program) = assertFailure $ "Parser succeeded with " ++ (show program) ++ " - should have failed"
     evaluate (Left err) = pos @=? errorPos err
 
 tests :: TestTree

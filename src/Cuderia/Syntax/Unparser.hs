@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Cuderia.Syntax.Unparser (unparse) where
+module Cuderia.Syntax.Unparser (unparse, unparseProgram) where
 
 import Cuderia.Syntax.Parser
 import qualified Data.Text as T
@@ -23,3 +23,6 @@ unparseExprs joiner exprs = T.intercalate joiner $ map unparseSExpr exprs
 
 unparse :: [SExpr] -> T.Text
 unparse = unparseExprs "\n"
+
+unparseProgram :: Program -> T.Text
+unparseProgram program = T.intercalate "\n" (map unparseSExpr $ exprs program)

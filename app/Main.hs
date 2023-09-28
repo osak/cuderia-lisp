@@ -18,8 +18,8 @@ main = do
     ip <- readIORef ipref
     case parse "(stdin)" (T.pack line) of
       Left err -> putStrLn $ "Parse error: " ++ show err
-      Right sexpr -> do
-        let (newip, result) = runInterpreter ip (head sexpr)
+      Right program -> do
+        let (newip, result) = runInterpreter ip program
         case result of
           Right _ -> writeIORef ipref newip
         case result of
