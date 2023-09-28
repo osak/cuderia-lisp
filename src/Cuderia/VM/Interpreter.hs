@@ -16,6 +16,7 @@ import Cuderia.Syntax.Parser as P
 import Data.Array
 import Data.Maybe
 import Data.Text qualified as T
+import Data.Map qualified as Map
 
 data Value
   = Nil
@@ -40,10 +41,10 @@ data CuderiaError
   | InvalidInvocationError String
   deriving (Show)
 
-data EnvironmentRep = EnvironmentRep {slots :: Array Int Value, currentError :: Maybe CuderiaError}
+data EnvironmentRep = EnvironmentRep {slots :: Array Int Value, vars :: Map.Map T.Text Value, currentError :: Maybe CuderiaError}
 
 newEnvironmentRep :: EnvironmentRep
-newEnvironmentRep = EnvironmentRep (array (0, 1000) []) Nothing
+newEnvironmentRep = EnvironmentRep (array (0, 1000) []) Map.empty Nothing
 
 newtype Environment a = Environment {runEnvironment :: EnvironmentRep -> (EnvironmentRep, Maybe a)}
 
@@ -51,10 +52,10 @@ getSlot :: Int -> Environment Value
 getSlot slot = Environment $ \rep -> (rep, Just $ slots rep ! slot)
 
 setSlot :: Int -> Value -> Environment Value
-setSlot slot val = Environment $ \rep -> (EnvironmentRep (slots rep // [(slot, val)]) (currentError rep), Just val)
+setSlot slot val = Environment $ \rep -> (rep {slots = slots rep // [(slot, val)] }, Just val)
 
 raise :: CuderiaError -> Environment a
-raise err = Environment $ \rep -> (EnvironmentRep (slots rep) (Just err), Nothing)
+raise err = Environment $ \rep -> (rep { currentError = Just err }, Nothing)
 
 getError :: Environment CuderiaError
 getError = Environment $ \rep -> (rep, currentError rep)
