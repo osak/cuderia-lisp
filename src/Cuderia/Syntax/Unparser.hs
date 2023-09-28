@@ -3,7 +3,7 @@
 module Cuderia.Syntax.Unparser (unparse, unparseProgram) where
 
 import Cuderia.Syntax.Parser
-import qualified Data.Text as T
+import Data.Text qualified as T
 
 unparseIdentifier :: Identifier -> T.Text
 unparseIdentifier (Identifier i) = i
