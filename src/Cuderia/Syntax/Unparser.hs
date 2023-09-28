@@ -15,8 +15,12 @@ unparseConstruct (Integer i) = T.pack $ show i
 unparseConstruct (String s) = "\"" <> s <> "\""
 unparseConstruct (Slot i) = T.pack $ "'" ++ show i
 
+unparseBinding :: (Identifier, Construct) -> T.Text
+unparseBinding (Identifier name, c) = "(" <> name <> " " <> unparseConstruct c <> ")"
+
 unparseSExpr :: SExpr -> T.Text
 unparseSExpr (Apply constructs) = "(" <> T.intercalate " " (map unparseConstruct constructs) <> ")"
+unparseSExpr (Let bindings body) = "(let (" <> T.intercalate " " (map unparseBinding bindings) <> ") " <> unparseSExpr body <> ")"
 
 unparseExprs :: T.Text -> [SExpr] -> T.Text
 unparseExprs joiner exprs = T.intercalate joiner $ map unparseSExpr exprs
