@@ -45,6 +45,7 @@ tests =
     [ shouldDoMath "Addition" "(+ 1 2 3)" 6,
       shouldDoMath "Subtraction" "(- 10 3 2)" 5,
       shouldDoMath "Multiplication" "(* 1 2 3 4 5)" 120,
+      shouldDoMath "Set and Get" "(do (set! '0 1) (get! '0))" 1,
       shouldFail
         "Adding non-number"
         "(+ 1 \"foo\")"

@@ -13,6 +13,7 @@ import Cuderia.Syntax.Parser as P
 import Data.Array
 import Data.Maybe
 import Data.Text qualified as T
+import Control.Monad (forM_)
 
 data Value
   = Nil
@@ -112,11 +113,18 @@ apply ident args = case ident of
     in do
         val <- evaluateConstruct construct
         setSlot slot val
+  Identifier "get!" ->
+    let ((Slot slot):_) = args
+    in getSlot slot
+  Identifier "do" -> do
+    results <- mapM evaluateConstruct args
+    pure $ last results
   _ -> undefined
 
 evaluateConstruct :: Construct -> Environment Value
 evaluateConstruct (Integer i) = pure $ IntValue i
 evaluateConstruct (String s) = pure $ StringValue s
+evaluateConstruct (Expr expr) = evaluateSExpr expr
 evaluateConstruct _ = raise $ InvalidInvocationError "Not supported"
 
 evaluateSExpr :: SExpr -> Environment Value
