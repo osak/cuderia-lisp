@@ -28,7 +28,7 @@ data Construct
   | Expr SExpr
   deriving (Show)
 
-newtype SExpr = SExpr [Construct]
+newtype SExpr = Apply [Construct]
   deriving (Show)
 
 data Program = Program { exprs :: [SExpr] }
@@ -79,7 +79,7 @@ sexpr = do
   spaces
   between (char '(' >> spaces) (char ')') $ do
     constructs <- many (construct <* spaces)
-    pure $ SExpr constructs
+    pure $ Apply constructs
 
 program :: CuderiaParsec Program
 program = do

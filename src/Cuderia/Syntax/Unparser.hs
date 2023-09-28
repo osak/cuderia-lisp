@@ -16,7 +16,7 @@ unparseConstruct (String s) = "\"" <> s <> "\""
 unparseConstruct (Slot i) = T.pack $ "'" ++ show i
 
 unparseSExpr :: SExpr -> T.Text
-unparseSExpr (SExpr constructs) = "(" <> T.intercalate " " (map unparseConstruct constructs) <> ")"
+unparseSExpr (Apply constructs) = "(" <> T.intercalate " " (map unparseConstruct constructs) <> ")"
 
 unparseExprs :: T.Text -> [SExpr] -> T.Text
 unparseExprs joiner exprs = T.intercalate joiner $ map unparseSExpr exprs

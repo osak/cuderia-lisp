@@ -151,7 +151,7 @@ evaluateConstruct (Expr expr) = evaluateSExpr expr
 evaluateConstruct _ = raise $ InvalidInvocationError "Not supported"
 
 evaluateSExpr :: SExpr -> Environment Value
-evaluateSExpr (SExpr []) = pure Nil
-evaluateSExpr (SExpr (f : args)) = case f of
+evaluateSExpr (Apply []) = pure Nil
+evaluateSExpr (Apply (f : args)) = case f of
   Var ident -> apply ident args
   _ -> raise $ InvalidFunctionError (show f ++ " is not a function")
