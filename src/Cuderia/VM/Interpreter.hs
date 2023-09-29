@@ -24,6 +24,7 @@ data Value
   = Nil
   | IntValue Int
   | StringValue T.Text
+  | BoolValue Bool
   | CellRef Int
   | Function [Symbol] SExpr
 
@@ -148,6 +149,11 @@ apply ident args = case ident of
   Identifier "+" -> foldInts (+) args
   Identifier "-" -> foldInts (-) args
   Identifier "*" -> foldInts (*) args
+  Identifier "<" -> do
+    let (op1:op2:_) = args
+    v1 <- evaluateConstruct op1
+    v2 <- evaluateConstruct op2
+    pure $ BoolValue ((intValue v1) < (intValue v2))
   Identifier "set!" ->
     let ((Slot slot) : construct : _) = args
      in do

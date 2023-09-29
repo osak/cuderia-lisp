@@ -12,7 +12,7 @@ main :: IO ()
 main = do
   ipref <- newIORef newInterpreter
   forever $ do
-    putStr "ξﾟ⊿ﾟ)ξ > "
+    putStr "ξﾟ⊿ ﾟ)ξ > "
     hFlush stdout
     line <- hGetLine stdin
     ip <- readIORef ipref
