@@ -7,6 +7,7 @@ where
 
 import Cuderia.Syntax.Parser
 import Cuderia.VM.Interpreter
+import Cuderia.VM.Interpreter (CuderiaError (UndefinedVariableError))
 import Data.Either (fromRight)
 import Data.Text qualified as T
 import Test.Tasty
@@ -46,11 +47,26 @@ tests =
       shouldDoMath "Subtraction" "(- 10 3 2)" 5,
       shouldDoMath "Multiplication" "(* 1 2 3 4 5)" 120,
       shouldDoMath "Set and Get" "(do (set! '0 1) (get! '0))" 1,
+      shouldDoMath "Let" "(let ((x 1) (y 2)) (+ x y))" 3,
       shouldFail
         "Adding non-number"
         "(+ 1 \"foo\")"
         ( \err -> case err of
             InvalidInvocationError msg -> msg @=? "\"foo\" is not a number"
+            _ -> assertFailure $ "Interpreter failed with an unexpected error: " ++ show err
+        ),
+      shouldFail
+        "Lookup undefined var"
+        "(+ 1 a)"
+        ( \err -> case err of
+            UndefinedVariableError msg -> msg @=? "Undefined variable a"
+            _ -> assertFailure $ "Interpreter failed with an unexpected error: " ++ show err
+        ),
+      shouldFail
+        "Lookup outside of let should fail"
+        "(do (let ((x 1)) (+ 1)) (+ x))"
+        ( \err -> case err of
+            UndefinedVariableError msg -> msg @=? "Undefined variable x"
             _ -> assertFailure $ "Interpreter failed with an unexpected error: " ++ show err
         )
     ]

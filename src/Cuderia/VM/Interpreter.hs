@@ -14,9 +14,9 @@ where
 import Control.Monad
 import Cuderia.Syntax.Parser as P
 import Data.Array
+import Data.Map.Strict qualified as Map
 import Data.Maybe
 import Data.Text qualified as T
-import Data.Map qualified as Map
 
 data Value
   = Nil
@@ -39,6 +39,7 @@ data Cell = Cell {car :: Value, cdr :: Value}
 data CuderiaError
   = InvalidFunctionError String
   | InvalidInvocationError String
+  | UndefinedVariableError T.Text
   deriving (Show)
 
 data EnvironmentRep = EnvironmentRep {slots :: Array Int Value, vars :: Map.Map T.Text Value, currentError :: Maybe CuderiaError}
@@ -52,13 +53,26 @@ getSlot :: Int -> Environment Value
 getSlot slot = Environment $ \rep -> (rep, Just $ slots rep ! slot)
 
 setSlot :: Int -> Value -> Environment Value
-setSlot slot val = Environment $ \rep -> (rep {slots = slots rep // [(slot, val)] }, Just val)
+setSlot slot val = Environment $ \rep -> (rep {slots = slots rep // [(slot, val)]}, Just val)
+
+setVar :: T.Text -> Value -> Environment Value
+setVar name val = Environment $ \rep -> (rep {vars = Map.insert name val $ vars rep}, Just val)
+
+getVar :: T.Text -> Environment Value
+getVar name = Environment $ \rep -> case Map.lookup name (vars rep) of
+  Just val -> (rep, Just val)
+  Nothing -> (rep {currentError = Just $ UndefinedVariableError $ "Undefined variable " <> name}, Nothing)
 
 raise :: CuderiaError -> Environment a
-raise err = Environment $ \rep -> (rep { currentError = Just err }, Nothing)
+raise err = Environment $ \rep -> (rep {currentError = Just err}, Nothing)
 
 getError :: Environment CuderiaError
 getError = Environment $ \rep -> (rep, currentError rep)
+
+runFork :: Environment Value -> Environment Value
+runFork e = Environment $ \rep -> case runEnvironment e rep of
+  (_, Just x) -> (rep, Just x)
+  (new_rep, Nothing) -> (new_rep, Nothing) -- In case of evaluation error, return the updated rep to provide useful context
 
 instance Monad Environment where
   return a = Environment $ \r -> (r, Just a)
@@ -148,6 +162,7 @@ evaluateConstruct :: Construct -> Environment Value
 evaluateConstruct (Integer i) = pure $ IntValue i
 evaluateConstruct (String s) = pure $ StringValue s
 evaluateConstruct (Expr expr) = evaluateSExpr expr
+evaluateConstruct (Var (Identifier name)) = getVar name
 evaluateConstruct _ = raise $ InvalidInvocationError "Not supported"
 
 evaluateSExpr :: SExpr -> Environment Value
@@ -155,3 +170,7 @@ evaluateSExpr (Apply []) = pure Nil
 evaluateSExpr (Apply (f : args)) = case f of
   Var ident -> apply ident args
   _ -> raise $ InvalidFunctionError (show f ++ " is not a function")
+evaluateSExpr (Let bindings body) = do
+  runFork $ do
+    forM_ bindings (\(Identifier name, val) -> evaluateConstruct val >>= setVar name)
+    evaluateSExpr body
