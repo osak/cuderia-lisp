@@ -32,6 +32,7 @@ display :: Value -> String
 display Nil = "(nil)"
 display (IntValue i) = show i
 display (StringValue s) = show s
+display (BoolValue b) = show b
 display (CellRef i) = "(ref to " ++ show i ++ ")"
 
 intValue :: Value -> Int
@@ -198,3 +199,9 @@ evaluateSExpr (Let bindings body) = do
 evaluateSExpr (Lambda args body) = do
     let argsyms = map (\(Identifier i) -> i) args
     pure $ Function argsyms body
+evaluateSExpr (If cond body1 body2) = do
+    condVal <- evaluateConstruct cond
+    case condVal of
+        BoolValue True -> evaluateConstruct body1
+        BoolValue False -> evaluateConstruct body2
+        _ -> raise $ InvalidInvocationError $ display condVal ++ " is not a boolean, thus incompatible for the condition of `if` statement."

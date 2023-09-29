@@ -49,6 +49,8 @@ tests =
       shouldDoMath "Set and Get" "(do (set! '0 1) (get! '0))" 1,
       shouldDoMath "Let" "(let ((x 1) (y 2)) (+ x y))" 3,
       shouldDoMath "Lambda" "(let ((f (lambda (x) (+ x 1)))) (f 10))" 11,
+      shouldDoMath "If-true" "(if (< 0 1) (+ 1 0) (+ 2 0))" 1,
+      shouldDoMath "If-false" "(if (< 1 0) (+ 1 0) (+ 2 0))" 2,
       shouldFail
         "Adding non-number"
         "(+ 1 \"foo\")"

@@ -22,6 +22,7 @@ unparseSExpr :: SExpr -> T.Text
 unparseSExpr (Apply constructs) = "(" <> T.intercalate " " (map unparseConstruct constructs) <> ")"
 unparseSExpr (Let bindings body) = "(let (" <> T.intercalate " " (map unparseBinding bindings) <> ") " <> unparseSExpr body <> ")"
 unparseSExpr (Lambda args body) = "(lambda (" <> T.intercalate " " (map unparseIdentifier args) <> ") " <> unparseSExpr body <> ")"
+unparseSExpr (If cond body1 body2) = "(if " <> unparseConstruct cond <> " " <> unparseConstruct body1 <> " " <> unparseConstruct body2 <> ")"
 
 unparseExprs :: T.Text -> [SExpr] -> T.Text
 unparseExprs joiner exprs = T.intercalate joiner $ map unparseSExpr exprs

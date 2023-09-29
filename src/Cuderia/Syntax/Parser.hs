@@ -36,6 +36,7 @@ data SExpr
   = Apply [Construct]
   | Let [(Identifier, Construct)] SExpr
   | Lambda [Identifier] SExpr
+  | If Construct Construct Construct
   deriving (Show)
 
 data Program = Program {exprs :: [SExpr]}
@@ -46,7 +47,7 @@ data ParserState = ParserState ()
 type CuderiaParsec a = Parsec T.Text ParserState a
 
 idLetter :: CuderiaParsec Char
-idLetter = letter <|> oneOf "+-*!"
+idLetter = letter <|> oneOf "+-*!<"
 
 identifier :: CuderiaParsec Identifier
 identifier = do
@@ -121,6 +122,7 @@ sexpr = do
       Nothing -> fail "Invalid S-expression"
       Just (Identifier "let") -> doLet
       Just (Identifier "lambda") -> doLambda
+      Just (Identifier "if") -> doIf
       Just name -> doApply name
   where
     doApply :: Identifier -> CuderiaParsec SExpr
@@ -128,6 +130,14 @@ sexpr = do
       spaces
       args <- many (construct <* spaces)
       pure $ Apply (Var first : args)
+    doIf = do
+      spaces
+      cond <- construct
+      spaces
+      body1 <- construct
+      spaces
+      body2 <- construct
+      pure $ If cond body1 body2
 
 program :: CuderiaParsec Program
 program = do

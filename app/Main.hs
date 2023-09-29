@@ -21,7 +21,7 @@ main = do
       Right program -> do
         let (newip, result) = runInterpreter ip program
         case result of
-          Right _ -> writeIORef ipref newip
-        case result of
           Left err -> putStrLn $ "Error: " ++ show err
-          Right val -> putStrLn $ display val
+          Right val -> do
+            writeIORef ipref newip
+            putStrLn $ display val
