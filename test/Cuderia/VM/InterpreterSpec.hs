@@ -48,6 +48,7 @@ tests =
       shouldDoMath "Multiplication" "(* 1 2 3 4 5)" 120,
       shouldDoMath "Set and Get" "(do (set! '0 1) (get! '0))" 1,
       shouldDoMath "Let" "(let ((x 1) (y 2)) (+ x y))" 3,
+      shouldDoMath "Lambda" "(let ((f (lambda (x) (+ x 1)))) (f 10))" 11,
       shouldFail
         "Adding non-number"
         "(+ 1 \"foo\")"

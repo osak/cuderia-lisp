@@ -18,11 +18,14 @@ import Data.Map.Strict qualified as Map
 import Data.Maybe
 import Data.Text qualified as T
 
+type Symbol = T.Text
+
 data Value
   = Nil
   | IntValue Int
   | StringValue T.Text
   | CellRef Int
+  | Function [Symbol] SExpr
 
 display :: Value -> String
 display Nil = "(nil)"
@@ -156,6 +159,18 @@ apply ident args = case ident of
   Identifier "do" -> do
     results <- mapM evaluateConstruct args
     pure $ last results
+  Identifier name -> do
+    maybeFunc <- getVar name
+    case maybeFunc of
+        Function params body -> do
+            let arity = length params
+            if arity /= length args then
+                raise $ InvalidInvocationError $ T.unpack $ name <> " expects " <> (T.pack $ show arity) <> " arguments but called with " <> (T.pack $ show $ length args) <> " arguments"
+            else
+                runFork $ do
+                    forM_ (zip params args) (\(name, val) -> evaluateConstruct val >>= setVar name)
+                    evaluateSExpr body
+        _ -> raise $ InvalidFunctionError $ T.unpack $ name <> " is not a function"
   _ -> undefined
 
 evaluateConstruct :: Construct -> Environment Value
@@ -174,3 +189,6 @@ evaluateSExpr (Let bindings body) = do
   runFork $ do
     forM_ bindings (\(Identifier name, val) -> evaluateConstruct val >>= setVar name)
     evaluateSExpr body
+evaluateSExpr (Lambda args body) = do
+    let argsyms = map (\(Identifier i) -> i) args
+    pure $ Function argsyms body
