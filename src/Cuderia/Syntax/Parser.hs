@@ -35,6 +35,7 @@ data Construct
 data SExpr
   = Apply [Construct]
   | Let [(Identifier, Construct)] SExpr
+  | Lambda [Identifier] SExpr
   deriving (Show)
 
 data Program = Program {exprs :: [SExpr]}
@@ -103,6 +104,14 @@ doLet = do
         spaces
         pure (name, val)
 
+doLambda :: CuderiaParsec SExpr
+doLambda = do
+  spaces
+  args <- slist identifier
+  spaces
+  body <- sexpr
+  pure $ Lambda args body
+
 sexpr :: CuderiaParsec SExpr
 sexpr = do
   spaces
@@ -111,6 +120,7 @@ sexpr = do
     case first of
       Nothing -> fail "Invalid S-expression"
       Just (Identifier "let") -> doLet
+      Just (Identifier "lambda") -> doLambda
       Just name -> doApply name
   where
     doApply :: Identifier -> CuderiaParsec SExpr

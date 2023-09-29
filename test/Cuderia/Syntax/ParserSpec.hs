@@ -38,6 +38,7 @@ tests =
       parserTestCase "String" "(const \"hello\")" "(const \"hello\")",
       parserTestCase "Slot" "(const '12)" "(const '12)",
       parserTestCase "Let" "(let ((x 1) (y 2)) (print x))" "(let ((x 1) (y 2)) (print x))",
+      parserTestCase "Lambda" "(lambda (x y) (+ x y))" "(lambda (x y) (+ x y))",
       parserFailureCase "Unclosng paren" "(cons 1 2" (1, 10),
       parserFailureCase "Unmatching paren" ")cons 1 2" (1, 1),
       parserFailureCase "Invalid number literal" "(const 123foo)" (1, 12)
