@@ -60,8 +60,8 @@ setVar name val = Environment $ \rep -> (rep {vars = Map.insert name val $ vars 
 
 getVar :: T.Text -> Environment Value
 getVar name = Environment $ \rep -> case Map.lookup name (vars rep) of
-  Just val -> (rep, Just val)
-  Nothing -> (rep {currentError = Just $ UndefinedVariableError $ "Undefined variable " <> name}, Nothing)
+  Just val -> runEnvironment (pure val) rep
+  Nothing -> runEnvironment (raise $ UndefinedVariableError $ "Undefined variable " <> name) rep
 
 raise :: CuderiaError -> Environment a
 raise err = Environment $ \rep -> (rep {currentError = Just err}, Nothing)
