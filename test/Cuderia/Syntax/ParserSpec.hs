@@ -43,7 +43,10 @@ tests =
       parseToIdentical "Let" "(let ((x 1) (y 2)) (print x))",
       parseToIdentical "Lambda" "(lambda (x y) (+ x y))",
       parseToIdentical "If" "(if (< 0 1) 1 (print 0))",
+      parseToIdentical "Cond" "(cond ((= x 1) 1) ((= x 2) 2))",
+      parseToIdentical "Cond-else" "(cond ((= x 1) 1) ((= x 2) 2) (else 3))",
       parserFailureCase "Unclosng paren" "(cons 1 2" (1, 10),
       parserFailureCase "Unmatching paren" ")cons 1 2" (1, 1),
-      parserFailureCase "Invalid number literal" "(const 123foo)" (1, 12)
+      parserFailureCase "Invalid number literal" "(const 123foo)" (1, 12),
+      parserFailureCase "Misplaced cond-else" "(cond ((= x 1) 1) (else 2) ((= x 3) 3))" (1, 28)
     ]

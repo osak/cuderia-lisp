@@ -11,8 +11,9 @@ module Cuderia.Syntax.Parser
   )
 where
 
+import Control.Applicative (liftA2)
 import Data.Text qualified as T
-import Text.Parsec as Parsec hiding (string)
+import Text.Parsec as Parsec
 
 type ParseError = Parsec.ParseError
 
@@ -37,6 +38,7 @@ data SExpr
   | Let [(Identifier, Term)] SExpr
   | Lambda [Identifier] SExpr
   | If Term Term Term
+  | Cond [(Term, Term)] (Maybe Term)
   deriving (Show, Eq)
 
 data Program = Program {exprs :: [SExpr]}
@@ -47,14 +49,20 @@ data ParserState = ParserState ()
 type CuderiaParsec a = Parsec T.Text ParserState a
 
 idLetter :: CuderiaParsec Char
-idLetter = letter <|> oneOf "+-*!<"
+idLetter = letter <|> oneOf "+-*!<="
 
 identifier :: CuderiaParsec Identifier
 identifier = do
   first <- idLetter
   rest <- many (idLetter <|> digit)
   spaces
-  pure $ Identifier (T.singleton first <> T.pack rest)
+  let ident = T.singleton first <> T.pack rest
+  case ident of
+    "else" -> fail . T.unpack $ "keyword '" <> ident <> "' is not allowed at this place"
+    _ -> pure $ Identifier ident
+
+keyword :: String -> CuderiaParsec String
+keyword kw = string kw <* notFollowedBy (idLetter <|> digit) <* spaces
 
 integer :: CuderiaParsec Term
 integer = do
@@ -66,15 +74,15 @@ integer = do
     Just '-' -> pure $ Integer (-absValue)
     _ -> pure $ Integer absValue
 
-string :: CuderiaParsec Term
-string = do
+doString :: CuderiaParsec Term
+doString = do
   _ <- char '"'
   letters <- many (noneOf "\"")
   _ <- char '"'
   pure . String $ T.pack letters
 
 term :: CuderiaParsec Term
-term = (expr <|> var <|> integer <|> string <|> slot) <* spaces
+term = (expr <|> var <|> integer <|> doString <|> slot) <* spaces
   where
     expr = fmap Expr sexpr
     var = fmap Var identifier
@@ -86,6 +94,9 @@ term = (expr <|> var <|> integer <|> string <|> slot) <* spaces
 -- Parses a list, that is, something enclosed in '(' and ')'
 list :: CuderiaParsec a -> CuderiaParsec a
 list inner = between (char '(' >> spaces) (char ')') inner <* spaces
+
+list2 :: CuderiaParsec a -> CuderiaParsec b -> CuderiaParsec (a, b)
+list2 pa pb = list $ liftA2 (,) pa pb
 
 -- Parses a list of items of the same kind
 slist :: CuderiaParsec a -> CuderiaParsec [a]
@@ -100,6 +111,7 @@ sexpr = do
       Just (Identifier "let") -> doLet
       Just (Identifier "lambda") -> doLambda
       Just (Identifier "if") -> doIf
+      Just (Identifier "cond") -> doCond
       Just name -> doApply name
   where
     doApply :: Identifier -> CuderiaParsec SExpr
@@ -108,11 +120,18 @@ sexpr = do
       pure $ Apply (Var first : args)
     doLet = Let <$> slist doBinding <*> sexpr
     doBinding = list $ do
-        name <- identifier
-        value <- term
-        pure (name, value)
+      name <- identifier
+      value <- term
+      pure (name, value)
     doLambda = Lambda <$> slist identifier <*> sexpr
     doIf = If <$> term <*> term <*> term
+    -- (cond (cond1 body1)
+    --       (cond2 body2)
+    --       (else  bodye))
+    doCond = do
+      arms <- many (try (list2 term term))
+      maybeElse <- optionMaybe (list $ keyword "else" *> term)
+      pure $ Cond arms maybeElse
 
 program :: CuderiaParsec Program
 program = do

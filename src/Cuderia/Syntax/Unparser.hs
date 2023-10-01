@@ -18,11 +18,21 @@ unparseTerm (Slot i) = T.pack $ "'" ++ show i
 unparseBinding :: (Identifier, Term) -> T.Text
 unparseBinding (Identifier name, c) = "(" <> name <> " " <> unparseTerm c <> ")"
 
+unparseList :: [Term] -> T.Text
+unparseList l = "(" <> (T.intercalate " " $ map unparseTerm l) <> ")"
+
 unparseSExpr :: SExpr -> T.Text
 unparseSExpr (Apply constructs) = "(" <> T.intercalate " " (map unparseTerm constructs) <> ")"
 unparseSExpr (Let bindings body) = "(let (" <> T.intercalate " " (map unparseBinding bindings) <> ") " <> unparseSExpr body <> ")"
 unparseSExpr (Lambda args body) = "(lambda (" <> T.intercalate " " (map unparseIdentifier args) <> ") " <> unparseSExpr body <> ")"
 unparseSExpr (If cond body1 body2) = "(if " <> unparseTerm cond <> " " <> unparseTerm body1 <> " " <> unparseTerm body2 <> ")"
+unparseSExpr (Cond arms maybeElse) =
+  "(cond "
+    <> T.intercalate " " (map (\(cond, body) -> unparseList [cond, body]) arms)
+    <> case maybeElse of
+      Just t -> " (else " <> unparseTerm t <> ")"
+      Nothing -> ""
+    <> ")"
 
 unparseExprs :: T.Text -> [SExpr] -> T.Text
 unparseExprs joiner exprs = T.intercalate joiner $ map unparseSExpr exprs
