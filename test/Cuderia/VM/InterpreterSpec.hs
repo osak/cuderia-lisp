@@ -7,7 +7,6 @@ where
 
 import Cuderia.Syntax.Parser
 import Cuderia.VM.Interpreter
-import Cuderia.VM.Interpreter (CuderiaError (UndefinedVariableError))
 import Data.Either (fromRight)
 import Data.Text qualified as T
 import Test.Tasty
@@ -21,15 +20,12 @@ shouldSuccess name src eval = testCase name $ do
     Right val -> eval val
     Left err -> assertFailure $ "Interpreter failed: " ++ show err
 
-shouldDoMath :: String -> T.Text -> Int -> TestTree
-shouldDoMath name src expected =
+shouldReturn :: String -> T.Text -> Value -> TestTree
+shouldReturn name src expected =
   shouldSuccess
     name
     src
-    ( \v -> case v of
-        IntValue i -> expected @=? i
-        other -> assertFailure $ "Interpreter returned wrong value: " ++ display other
-    )
+    (expected @=?)
 
 shouldFail :: String -> T.Text -> (CuderiaError -> Assertion) -> TestTree
 shouldFail name src eval = testCase name $ do
@@ -43,14 +39,14 @@ tests :: TestTree
 tests =
   testGroup
     "Interpreter"
-    [ shouldDoMath "Addition" "(+ 1 2 3)" 6,
-      shouldDoMath "Subtraction" "(- 10 3 2)" 5,
-      shouldDoMath "Multiplication" "(* 1 2 3 4 5)" 120,
-      shouldDoMath "Set and Get" "(do (set! '0 1) (get! '0))" 1,
-      shouldDoMath "Let" "(let ((x 1) (y 2)) (+ x y))" 3,
-      shouldDoMath "Lambda" "(let ((f (lambda (x) (+ x 1)))) (f 10))" 11,
-      shouldDoMath "If-true" "(if (< 0 1) 1 2)" 1,
-      shouldDoMath "If-false" "(if (< 1 0) 1 2)" 2,
+    [ shouldReturn "Addition" "(+ 1 2 3)" (IntValue 6),
+      shouldReturn "Subtraction" "(- 10 3 2)" (IntValue 5),
+      shouldReturn "Multiplication" "(* 1 2 3 4 5)" (IntValue 120),
+      shouldReturn "Set and Get" "(do (set! '0 1) (get! '0))" (IntValue 1),
+      shouldReturn "Let" "(let ((x 1) (y 2)) (+ x y))" (IntValue 3),
+      shouldReturn "Lambda" "(let ((f (lambda (x) (+ x 1)))) (f 10))" (IntValue 11),
+      shouldReturn "If-true" "(if (< 0 1) 1 2)" (IntValue 1),
+      shouldReturn "If-false" "(if (< 1 0) 1 2)" (IntValue 2),
       shouldFail
         "Adding non-number"
         "(+ 1 \"foo\")"

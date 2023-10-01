@@ -22,7 +22,7 @@ errorPos err =
    in (sourceLine pos, sourceColumn pos)
 
 newtype Identifier = Identifier T.Text
-  deriving (Show)
+  deriving (Show, Eq)
 
 data Term
   = Var Identifier
@@ -30,14 +30,14 @@ data Term
   | String T.Text
   | Slot Int
   | Expr SExpr
-  deriving (Show)
+  deriving (Show, Eq)
 
 data SExpr
   = Apply [Term]
   | Let [(Identifier, Term)] SExpr
   | Lambda [Identifier] SExpr
   | If Term Term Term
-  deriving (Show)
+  deriving (Show, Eq)
 
 data Program = Program {exprs :: [SExpr]}
   deriving (Show)

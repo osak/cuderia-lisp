@@ -27,6 +27,7 @@ data Value
   | BoolValue Bool
   | CellRef Int
   | Function [Symbol] SExpr
+  deriving (Show, Eq)
 
 display :: Value -> String
 display Nil = "(nil)"
