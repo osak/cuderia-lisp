@@ -75,6 +75,7 @@ runFork e = Evaluation $ \rep -> case runEvaluation e rep of
   (new_rep, Nothing) -> (new_rep, Nothing) -- In case of evaluation error, return the updated rep to provide useful context
 
 instance Monad Evaluation where
+  return :: a -> Evaluation a
   return a = Evaluation $ \r -> (r, Just a)
   a >>= f = Evaluation $ \r -> case currentError r of
     Just err -> (r, Nothing)
@@ -91,7 +92,7 @@ instance Applicative Evaluation where
   pure a = do return a
   mfab <*> ma = do fab <- mfab; fab <$> ma
 
-newtype Interpreter = Interpreter {environmentRep :: Environment}
+newtype Interpreter = Interpreter {environment :: Environment}
 
 newInterpreter :: Interpreter
 newInterpreter = Interpreter newEnvironment
@@ -110,7 +111,7 @@ runInterpreter ip program = case run of
               Just x -> Right (newrep, x)
               Nothing -> Left (newrep, fromJust $ currentError newrep)
         )
-        (environmentRep ip, Nil)
+        (environment ip, Nil)
         (exprs program)
 
 interpret :: SExpr -> Either CuderiaError Value
