@@ -18,6 +18,9 @@ parserTestCase name src expected = testCase name $ evaluate (parse name src)
     evaluate (Right program) = expected @=? unparseProgram program
     evaluate (Left err) = assertFailure $ "Parse error: " <> show err
 
+parseToIdentical :: String -> T.Text -> TestTree
+parseToIdentical name src = parserTestCase name src src
+
 parserFailureCase :: String -> T.Text -> (Int, Int) -> TestTree
 parserFailureCase name src pos = testCase name $ evaluate (parse name src)
   where
@@ -29,17 +32,17 @@ tests :: TestTree
 tests =
   testGroup
     "Parser tests"
-    [ parserTestCase "Simple" "(cons 1 2)" "(cons 1 2)",
-      parserTestCase "Nested" "(cons (cons 1 2) 3)" "(cons (cons 1 2) 3)",
-      parserTestCase "Negative numbers" "(cons (cons -1 -2) -3)" "(cons (cons -1 -2) -3)",
+    [ parseToIdentical "Simple" "(cons 1 2)",
+      parseToIdentical "Nested" "(cons (cons 1 2) 3)",
+      parseToIdentical "Negative numbers" "(cons (cons -1 -2) -3)",
       parserTestCase "Ignore spaces" "(  cons  foo  bar )" "(cons foo bar)",
-      parserTestCase "No arguments" "(nil)" "(nil)",
-      parserTestCase "Plus" "(+ 1 2 3)" "(+ 1 2 3)",
-      parserTestCase "String" "(const \"hello\")" "(const \"hello\")",
-      parserTestCase "Slot" "(const '12)" "(const '12)",
-      parserTestCase "Let" "(let ((x 1) (y 2)) (print x))" "(let ((x 1) (y 2)) (print x))",
-      parserTestCase "Lambda" "(lambda (x y) (+ x y))" "(lambda (x y) (+ x y))",
-      parserTestCase "If" "(if (< 0 1) 1 (print 0))" "(if (< 0 1) 1 (print 0))",
+      parseToIdentical "No arguments" "(nil)",
+      parseToIdentical "Plus" "(+ 1 2 3)",
+      parseToIdentical "String" "(const \"hello\")",
+      parseToIdentical "Slot" "(const '12)",
+      parseToIdentical "Let" "(let ((x 1) (y 2)) (print x))",
+      parseToIdentical "Lambda" "(lambda (x y) (+ x y))",
+      parseToIdentical "If" "(if (< 0 1) 1 (print 0))",
       parserFailureCase "Unclosng paren" "(cons 1 2" (1, 10),
       parserFailureCase "Unmatching paren" ")cons 1 2" (1, 1),
       parserFailureCase "Invalid number literal" "(const 123foo)" (1, 12)
