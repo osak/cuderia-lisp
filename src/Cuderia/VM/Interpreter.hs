@@ -18,16 +18,21 @@ import Data.Map.Strict qualified as Map
 import Data.Maybe
 import Data.Text qualified as T
 
+type Symbol = T.Text
+
 data Value
   = Nil
   | IntValue Int
   | StringValue T.Text
+  | BoolValue Bool
   | CellRef Int
+  | Function [Symbol] SExpr
 
 display :: Value -> String
 display Nil = "(nil)"
 display (IntValue i) = show i
 display (StringValue s) = show s
+display (BoolValue b) = show b
 display (CellRef i) = "(ref to " ++ show i ++ ")"
 
 intValue :: Value -> Int
@@ -146,6 +151,11 @@ apply ident args = case ident of
   Identifier "+" -> foldInts (+) args
   Identifier "-" -> foldInts (-) args
   Identifier "*" -> foldInts (*) args
+  Identifier "<" -> do
+    let (op1:op2:_) = args
+    v1 <- evaluateConstruct op1
+    v2 <- evaluateConstruct op2
+    pure $ BoolValue ((intValue v1) < (intValue v2))
   Identifier "set!" ->
     let ((Slot slot) : construct : _) = args
      in do
@@ -157,6 +167,18 @@ apply ident args = case ident of
   Identifier "do" -> do
     results <- mapM evaluateConstruct args
     pure $ last results
+  Identifier name -> do
+    maybeFunc <- getVar name
+    case maybeFunc of
+        Function params body -> do
+            let arity = length params
+            if arity /= length args then
+                raise $ InvalidInvocationError $ T.unpack $ name <> " expects " <> (T.pack $ show arity) <> " arguments but called with " <> (T.pack $ show $ length args) <> " arguments"
+            else
+                runFork $ do
+                    forM_ (zip params args) (\(name, val) -> evaluateConstruct val >>= setVar name)
+                    evaluateSExpr body
+        _ -> raise $ InvalidFunctionError $ T.unpack $ name <> " is not a function"
   _ -> undefined
 
 evaluateConstruct :: Construct -> Evaluation Value
@@ -175,3 +197,12 @@ evaluateSExpr (Let bindings body) = do
   runFork $ do
     forM_ bindings (\(Identifier name, val) -> evaluateConstruct val >>= setVar name)
     evaluateSExpr body
+evaluateSExpr (Lambda args body) = do
+    let argsyms = map (\(Identifier i) -> i) args
+    pure $ Function argsyms body
+evaluateSExpr (If cond body1 body2) = do
+    condVal <- evaluateConstruct cond
+    case condVal of
+        BoolValue True -> evaluateConstruct body1
+        BoolValue False -> evaluateConstruct body2
+        _ -> raise $ InvalidInvocationError $ display condVal ++ " is not a boolean, thus incompatible for the condition of `if` statement."
