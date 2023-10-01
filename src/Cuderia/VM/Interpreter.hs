@@ -41,10 +41,15 @@ intValue :: Value -> Int
 intValue (IntValue i) = i
 intValue v = error . T.unpack $ "Bug: IntValue expected but got " <> display v
 
+expectBool :: Value -> Evaluation Bool
+expectBool (BoolValue b) = pure b
+expectBool v = raise $ TypeMismatchError $ "Expected a bool but got " <> display v
+
 data CuderiaError
   = InvalidFunctionError T.Text
   | InvalidInvocationError T.Text
   | UndefinedVariableError T.Text
+  | TypeMismatchError T.Text
   deriving (Show)
 
 data Environment = Environment {slots :: Array Int Value, vars :: Map.Map T.Text Value, currentError :: Maybe CuderiaError}
@@ -152,10 +157,15 @@ apply ident args = case ident of
   Identifier "-" -> foldInts (-) args
   Identifier "*" -> foldInts (*) args
   Identifier "<" -> do
-    let (op1:op2:_) = args
+    let (op1 : op2 : _) = args
     v1 <- evaluateTerm op1
     v2 <- evaluateTerm op2
     pure $ BoolValue ((intValue v1) < (intValue v2))
+  Identifier "=" -> do
+    let (op1 : op2 : _) = args
+    v1 <- evaluateTerm op1
+    v2 <- evaluateTerm op2
+    pure $ BoolValue ((intValue v1) == (intValue v2))
   Identifier "set!" ->
     let ((Slot slot) : construct : _) = args
      in do
@@ -170,15 +180,14 @@ apply ident args = case ident of
   Identifier name -> do
     maybeFunc <- getVar name
     case maybeFunc of
-        Function params body -> do
-            let arity = length params
-            if arity /= length args then
-                raise $ InvalidInvocationError $ name <> " expects " <> (T.pack $ show arity) <> " arguments but called with " <> (T.pack $ show $ length args) <> " arguments"
-            else
-                runFork $ do
-                    forM_ (zip params args) (\(name, val) -> evaluateTerm val >>= setVar name)
-                    evaluateSExpr body
-        _ -> raise $ InvalidFunctionError $ name <> " is not a function"
+      Function params body -> do
+        let arity = length params
+        if arity /= length args
+          then raise $ InvalidInvocationError $ name <> " expects " <> (T.pack $ show arity) <> " arguments but called with " <> (T.pack $ show $ length args) <> " arguments"
+          else runFork $ do
+            forM_ (zip params args) (\(name, val) -> evaluateTerm val >>= setVar name)
+            evaluateSExpr body
+      _ -> raise $ InvalidFunctionError $ name <> " is not a function"
   _ -> undefined
 
 evaluateTerm :: Term -> Evaluation Value
@@ -198,11 +207,18 @@ evaluateSExpr (Let bindings body) = do
     forM_ bindings (\(Identifier name, val) -> evaluateTerm val >>= setVar name)
     evaluateSExpr body
 evaluateSExpr (Lambda args body) = do
-    let argsyms = map (\(Identifier i) -> i) args
-    pure $ Function argsyms body
+  let argsyms = map (\(Identifier i) -> i) args
+  pure $ Function argsyms body
 evaluateSExpr (If cond body1 body2) = do
-    condVal <- evaluateTerm cond
-    case condVal of
-        BoolValue True -> evaluateTerm body1
-        BoolValue False -> evaluateTerm body2
-        _ -> raise $ InvalidInvocationError $ display condVal <> " is not a boolean, thus incompatible for the condition of `if` statement."
+  condVal <- evaluateTerm cond
+  case condVal of
+    BoolValue True -> evaluateTerm body1
+    BoolValue False -> evaluateTerm body2
+    _ -> raise $ InvalidInvocationError $ display condVal <> " is not a boolean, thus incompatible for the condition of `if` statement."
+evaluateSExpr (Cond arms maybeElse) = do
+  matchingArms <- filterM (\(cond, _) -> evaluateTerm cond >>= expectBool) arms
+  case matchingArms of
+    ((_, body) : _) -> evaluateTerm body
+    _ -> case maybeElse of
+      Just body -> evaluateTerm body
+      _ -> pure Nil

@@ -7,6 +7,7 @@ where
 
 import Cuderia.Syntax.Parser
 import Cuderia.VM.Interpreter
+import Cuderia.VM.Interpreter (CuderiaError (TypeMismatchError))
 import Data.Either (fromRight)
 import Data.Text qualified as T
 import Test.Tasty
@@ -47,6 +48,8 @@ tests =
       shouldReturn "Lambda" "(let ((f (lambda (x) (+ x 1)))) (f 10))" (IntValue 11),
       shouldReturn "If-true" "(if (< 0 1) 1 2)" (IntValue 1),
       shouldReturn "If-false" "(if (< 1 0) 1 2)" (IntValue 2),
+      shouldReturn "Cond" "(cond ((= 1 0) 0) ((= 1 1) 1))" (IntValue 1),
+      shouldReturn "Cond-else" "(cond ((= 2 0) 0) ((= 2 1) 1) (else 2))" (IntValue 2),
       shouldFail
         "Adding non-number"
         "(+ 1 \"foo\")"
@@ -66,6 +69,13 @@ tests =
         "(do (let ((x 1)) (+ 1)) (+ x))"
         ( \err -> case err of
             UndefinedVariableError msg -> msg @=? "Undefined variable x"
+            _ -> assertFailure $ "Interpreter failed with an unexpected error: " ++ show err
+        ),
+      shouldFail
+        "Cond condition does not evaluate to BoolValue"
+        "(cond ((+ 1 1) 2))"
+        ( \err -> case err of
+            TypeMismatchError msg -> msg @=? "Expected a bool but got 2"
             _ -> assertFailure $ "Interpreter failed with an unexpected error: " ++ show err
         )
     ]
