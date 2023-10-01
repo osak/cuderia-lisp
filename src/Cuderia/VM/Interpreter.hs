@@ -126,19 +126,19 @@ interpret sexpr =
         Just err -> Left err
         Nothing -> Right $ fromMaybe Nil ret
 
-foldInts :: (Int -> Int -> Int) -> [Construct] -> Evaluation Value
+foldInts :: (Int -> Int -> Int) -> [Term] -> Evaluation Value
 foldInts _ [] = raise $ InvalidInvocationError "At least one operand must be given"
 foldInts f (c : cs) = fmap IntValue result
   where
     result = do
-      first <- evaluateConstruct c
+      first <- evaluateTerm c
       z <- case first of
         IntValue i -> pure i
         _ -> raise $ InvalidInvocationError $ display first ++ " is not a number"
       foldl
         ( \acc v -> do
             cur <- acc
-            val <- evaluateConstruct v
+            val <- evaluateTerm v
             case val of
               IntValue i -> pure (f cur i)
               _ -> raise $ InvalidInvocationError $ display val ++ " is not a number"
@@ -146,26 +146,26 @@ foldInts f (c : cs) = fmap IntValue result
         (pure z)
         cs
 
-apply :: Identifier -> [Construct] -> Evaluation Value
+apply :: Identifier -> [Term] -> Evaluation Value
 apply ident args = case ident of
   Identifier "+" -> foldInts (+) args
   Identifier "-" -> foldInts (-) args
   Identifier "*" -> foldInts (*) args
   Identifier "<" -> do
     let (op1:op2:_) = args
-    v1 <- evaluateConstruct op1
-    v2 <- evaluateConstruct op2
+    v1 <- evaluateTerm op1
+    v2 <- evaluateTerm op2
     pure $ BoolValue ((intValue v1) < (intValue v2))
   Identifier "set!" ->
     let ((Slot slot) : construct : _) = args
      in do
-          val <- evaluateConstruct construct
+          val <- evaluateTerm construct
           setSlot slot val
   Identifier "get!" ->
     let ((Slot slot) : _) = args
      in getSlot slot
   Identifier "do" -> do
-    results <- mapM evaluateConstruct args
+    results <- mapM evaluateTerm args
     pure $ last results
   Identifier name -> do
     maybeFunc <- getVar name
@@ -176,17 +176,17 @@ apply ident args = case ident of
                 raise $ InvalidInvocationError $ T.unpack $ name <> " expects " <> (T.pack $ show arity) <> " arguments but called with " <> (T.pack $ show $ length args) <> " arguments"
             else
                 runFork $ do
-                    forM_ (zip params args) (\(name, val) -> evaluateConstruct val >>= setVar name)
+                    forM_ (zip params args) (\(name, val) -> evaluateTerm val >>= setVar name)
                     evaluateSExpr body
         _ -> raise $ InvalidFunctionError $ T.unpack $ name <> " is not a function"
   _ -> undefined
 
-evaluateConstruct :: Construct -> Evaluation Value
-evaluateConstruct (Integer i) = pure $ IntValue i
-evaluateConstruct (String s) = pure $ StringValue s
-evaluateConstruct (Expr expr) = evaluateSExpr expr
-evaluateConstruct (Var (Identifier name)) = getVar name
-evaluateConstruct _ = raise $ InvalidInvocationError "Not supported"
+evaluateTerm :: Term -> Evaluation Value
+evaluateTerm (Integer i) = pure $ IntValue i
+evaluateTerm (String s) = pure $ StringValue s
+evaluateTerm (Expr expr) = evaluateSExpr expr
+evaluateTerm (Var (Identifier name)) = getVar name
+evaluateTerm _ = raise $ InvalidInvocationError "Not supported"
 
 evaluateSExpr :: SExpr -> Evaluation Value
 evaluateSExpr (Apply []) = pure Nil
@@ -195,14 +195,14 @@ evaluateSExpr (Apply (f : args)) = case f of
   _ -> raise $ InvalidFunctionError (show f ++ " is not a function")
 evaluateSExpr (Let bindings body) = do
   runFork $ do
-    forM_ bindings (\(Identifier name, val) -> evaluateConstruct val >>= setVar name)
+    forM_ bindings (\(Identifier name, val) -> evaluateTerm val >>= setVar name)
     evaluateSExpr body
 evaluateSExpr (Lambda args body) = do
     let argsyms = map (\(Identifier i) -> i) args
     pure $ Function argsyms body
 evaluateSExpr (If cond body1 body2) = do
-    condVal <- evaluateConstruct cond
+    condVal <- evaluateTerm cond
     case condVal of
-        BoolValue True -> evaluateConstruct body1
-        BoolValue False -> evaluateConstruct body2
+        BoolValue True -> evaluateTerm body1
+        BoolValue False -> evaluateTerm body2
         _ -> raise $ InvalidInvocationError $ display condVal ++ " is not a boolean, thus incompatible for the condition of `if` statement."

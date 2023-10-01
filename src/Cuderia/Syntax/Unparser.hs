@@ -8,21 +8,21 @@ import Data.Text qualified as T
 unparseIdentifier :: Identifier -> T.Text
 unparseIdentifier (Identifier i) = i
 
-unparseConstruct :: Construct -> T.Text
-unparseConstruct (Var v) = unparseIdentifier v
-unparseConstruct (Expr e) = unparseSExpr e
-unparseConstruct (Integer i) = T.pack $ show i
-unparseConstruct (String s) = "\"" <> s <> "\""
-unparseConstruct (Slot i) = T.pack $ "'" ++ show i
+unparseTerm :: Term -> T.Text
+unparseTerm (Var v) = unparseIdentifier v
+unparseTerm (Expr e) = unparseSExpr e
+unparseTerm (Integer i) = T.pack $ show i
+unparseTerm (String s) = "\"" <> s <> "\""
+unparseTerm (Slot i) = T.pack $ "'" ++ show i
 
-unparseBinding :: (Identifier, Construct) -> T.Text
-unparseBinding (Identifier name, c) = "(" <> name <> " " <> unparseConstruct c <> ")"
+unparseBinding :: (Identifier, Term) -> T.Text
+unparseBinding (Identifier name, c) = "(" <> name <> " " <> unparseTerm c <> ")"
 
 unparseSExpr :: SExpr -> T.Text
-unparseSExpr (Apply constructs) = "(" <> T.intercalate " " (map unparseConstruct constructs) <> ")"
+unparseSExpr (Apply constructs) = "(" <> T.intercalate " " (map unparseTerm constructs) <> ")"
 unparseSExpr (Let bindings body) = "(let (" <> T.intercalate " " (map unparseBinding bindings) <> ") " <> unparseSExpr body <> ")"
 unparseSExpr (Lambda args body) = "(lambda (" <> T.intercalate " " (map unparseIdentifier args) <> ") " <> unparseSExpr body <> ")"
-unparseSExpr (If cond body1 body2) = "(if " <> unparseConstruct cond <> " " <> unparseConstruct body1 <> " " <> unparseConstruct body2 <> ")"
+unparseSExpr (If cond body1 body2) = "(if " <> unparseTerm cond <> " " <> unparseTerm body1 <> " " <> unparseTerm body2 <> ")"
 
 unparseExprs :: T.Text -> [SExpr] -> T.Text
 unparseExprs joiner exprs = T.intercalate joiner $ map unparseSExpr exprs

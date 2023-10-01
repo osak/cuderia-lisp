@@ -5,7 +5,7 @@ module Cuderia.Syntax.Parser
     Cuderia.Syntax.Parser.ParseError,
     Cuderia.Syntax.Parser.errorPos,
     Identifier (..),
-    Construct (..),
+    Term (..),
     SExpr (..),
     Program (..),
   )
@@ -24,7 +24,7 @@ errorPos err =
 newtype Identifier = Identifier T.Text
   deriving (Show)
 
-data Construct
+data Term
   = Var Identifier
   | Integer Int
   | String T.Text
@@ -33,10 +33,10 @@ data Construct
   deriving (Show)
 
 data SExpr
-  = Apply [Construct]
-  | Let [(Identifier, Construct)] SExpr
+  = Apply [Term]
+  | Let [(Identifier, Term)] SExpr
   | Lambda [Identifier] SExpr
-  | If Construct Construct Construct
+  | If Term Term Term
   deriving (Show)
 
 data Program = Program {exprs :: [SExpr]}
@@ -55,7 +55,7 @@ identifier = do
   rest <- many (idLetter <|> digit)
   pure $ Identifier (T.singleton first <> T.pack rest)
 
-integer :: CuderiaParsec Construct
+integer :: CuderiaParsec Term
 integer = do
   minus <- optionMaybe (char '-')
   digits <- many1 digit
@@ -65,14 +65,14 @@ integer = do
     Just '-' -> pure $ Integer (-absValue)
     _ -> pure $ Integer absValue
 
-string :: CuderiaParsec Construct
+string :: CuderiaParsec Term
 string = do
   _ <- char '"'
   letters <- many (noneOf "\"")
   _ <- char '"'
   pure . String $ T.pack letters
 
-construct :: CuderiaParsec Construct
+construct :: CuderiaParsec Term
 construct = expr <|> var <|> integer <|> string <|> slot
   where
     expr = fmap Expr sexpr
@@ -96,7 +96,7 @@ doLet = do
   body <- sexpr
   pure $ Let bindings body
   where
-    binding :: CuderiaParsec (Identifier, Construct)
+    binding :: CuderiaParsec (Identifier, Term)
     binding = do
       between (char '(' >> spaces) (char ')') $ do
         name <- identifier
@@ -131,13 +131,13 @@ sexpr = do
       args <- many (construct <* spaces)
       pure $ Apply (Var first : args)
     doIf = do
-      spaces
-      cond <- construct
-      spaces
-      body1 <- construct
-      spaces
-      body2 <- construct
-      pure $ If cond body1 body2
+          spaces
+          cond <- construct
+          spaces
+          body1 <- construct
+          spaces
+          body2 <- construct
+          pure $ If cond body1 body2
 
 program :: CuderiaParsec Program
 program = do
