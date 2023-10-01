@@ -32,7 +32,7 @@ shouldFail name src eval = testCase name $ do
   let program = fromRight undefined $ parse name src
   let (_, result) = runInterpreter newInterpreter program
   case result of
-    Right val -> assertFailure $ "Interpreter succeeded with " ++ display val ++ " - should have failed"
+    Right val -> assertFailure . T.unpack $ "Interpreter succeeded with " <> display val <> " - should have failed"
     Left err -> eval err
 
 tests :: TestTree

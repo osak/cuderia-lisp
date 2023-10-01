@@ -29,22 +29,20 @@ data Value
   | Function [Symbol] SExpr
   deriving (Show, Eq)
 
-display :: Value -> String
+display :: Value -> T.Text
 display Nil = "(nil)"
-display (IntValue i) = show i
-display (StringValue s) = show s
-display (BoolValue b) = show b
-display (CellRef i) = "(ref to " ++ show i ++ ")"
+display (IntValue i) = T.pack $ show i
+display (StringValue s) = T.pack $ show s
+display (BoolValue b) = T.pack $ show b
+display (CellRef i) = "(ref to " <> (T.pack $ show i) <> ")"
 
 intValue :: Value -> Int
 intValue (IntValue i) = i
-intValue v = error $ "Bug: IntValue expected but got " ++ display v
-
-data Cell = Cell {car :: Value, cdr :: Value}
+intValue v = error . T.unpack $ "Bug: IntValue expected but got " <> display v
 
 data CuderiaError
-  = InvalidFunctionError String
-  | InvalidInvocationError String
+  = InvalidFunctionError T.Text
+  | InvalidInvocationError T.Text
   | UndefinedVariableError T.Text
   deriving (Show)
 
@@ -135,14 +133,14 @@ foldInts f (c : cs) = fmap IntValue result
       first <- evaluateTerm c
       z <- case first of
         IntValue i -> pure i
-        _ -> raise $ InvalidInvocationError $ display first ++ " is not a number"
+        _ -> raise $ InvalidInvocationError $ display first <> " is not a number"
       foldl
         ( \acc v -> do
             cur <- acc
             val <- evaluateTerm v
             case val of
               IntValue i -> pure (f cur i)
-              _ -> raise $ InvalidInvocationError $ display val ++ " is not a number"
+              _ -> raise $ InvalidInvocationError $ display val <> " is not a number"
         )
         (pure z)
         cs
@@ -174,12 +172,12 @@ apply ident args = case ident of
         Function params body -> do
             let arity = length params
             if arity /= length args then
-                raise $ InvalidInvocationError $ T.unpack $ name <> " expects " <> (T.pack $ show arity) <> " arguments but called with " <> (T.pack $ show $ length args) <> " arguments"
+                raise $ InvalidInvocationError $ name <> " expects " <> (T.pack $ show arity) <> " arguments but called with " <> (T.pack $ show $ length args) <> " arguments"
             else
                 runFork $ do
                     forM_ (zip params args) (\(name, val) -> evaluateTerm val >>= setVar name)
                     evaluateSExpr body
-        _ -> raise $ InvalidFunctionError $ T.unpack $ name <> " is not a function"
+        _ -> raise $ InvalidFunctionError $ name <> " is not a function"
   _ -> undefined
 
 evaluateTerm :: Term -> Evaluation Value
@@ -193,7 +191,7 @@ evaluateSExpr :: SExpr -> Evaluation Value
 evaluateSExpr (Apply []) = pure Nil
 evaluateSExpr (Apply (f : args)) = case f of
   Var ident -> apply ident args
-  _ -> raise $ InvalidFunctionError (show f ++ " is not a function")
+  _ -> raise $ InvalidFunctionError (T.pack (show f) <> " is not a function")
 evaluateSExpr (Let bindings body) = do
   runFork $ do
     forM_ bindings (\(Identifier name, val) -> evaluateTerm val >>= setVar name)
@@ -206,4 +204,4 @@ evaluateSExpr (If cond body1 body2) = do
     case condVal of
         BoolValue True -> evaluateTerm body1
         BoolValue False -> evaluateTerm body2
-        _ -> raise $ InvalidInvocationError $ display condVal ++ " is not a boolean, thus incompatible for the condition of `if` statement."
+        _ -> raise $ InvalidInvocationError $ display condVal <> " is not a boolean, thus incompatible for the condition of `if` statement."

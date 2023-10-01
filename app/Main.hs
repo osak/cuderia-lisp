@@ -24,4 +24,4 @@ main = do
           Left err -> putStrLn $ "Error: " ++ show err
           Right val -> do
             writeIORef ipref newip
-            putStrLn $ display val
+            putStrLn . T.unpack $ display val
