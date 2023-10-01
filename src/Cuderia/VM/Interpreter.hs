@@ -35,6 +35,7 @@ display (IntValue i) = T.pack $ show i
 display (StringValue s) = T.pack $ show s
 display (BoolValue b) = T.pack $ show b
 display (CellRef i) = "(ref to " <> (T.pack $ show i) <> ")"
+display (Function params _) = "(function taking (" <> T.intercalate " " params <> "))"
 
 intValue :: Value -> Int
 intValue (IntValue i) = i
