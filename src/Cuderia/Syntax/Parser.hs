@@ -53,6 +53,7 @@ identifier :: CuderiaParsec Identifier
 identifier = do
   first <- idLetter
   rest <- many (idLetter <|> digit)
+  spaces
   pure $ Identifier (T.singleton first <> T.pack rest)
 
 integer :: CuderiaParsec Term
@@ -72,8 +73,8 @@ string = do
   _ <- char '"'
   pure . String $ T.pack letters
 
-construct :: CuderiaParsec Term
-construct = expr <|> var <|> integer <|> string <|> slot
+term :: CuderiaParsec Term
+term = (expr <|> var <|> integer <|> string <|> slot) <* spaces
   where
     expr = fmap Expr sexpr
     var = fmap Var identifier
@@ -82,41 +83,17 @@ construct = expr <|> var <|> integer <|> string <|> slot
       (Integer i) <- integer
       pure $ Slot i
 
+-- Parses a list, that is, something enclosed in '(' and ')'
+list :: CuderiaParsec a -> CuderiaParsec a
+list inner = between (char '(' >> spaces) (char ')') inner <* spaces
+
+-- Parses a list of items of the same kind
 slist :: CuderiaParsec a -> CuderiaParsec [a]
-slist itemParsec = do
-  spaces
-  between (char '(' >> spaces) (char ')') $ do
-    many (itemParsec <* spaces)
-
-doLet :: CuderiaParsec SExpr
-doLet = do
-  spaces
-  bindings <- slist binding
-  spaces
-  body <- sexpr
-  pure $ Let bindings body
-  where
-    binding :: CuderiaParsec (Identifier, Term)
-    binding = do
-      between (char '(' >> spaces) (char ')') $ do
-        name <- identifier
-        spaces
-        val <- construct
-        spaces
-        pure (name, val)
-
-doLambda :: CuderiaParsec SExpr
-doLambda = do
-  spaces
-  args <- slist identifier
-  spaces
-  body <- sexpr
-  pure $ Lambda args body
+slist itemParsec = list (many itemParsec)
 
 sexpr :: CuderiaParsec SExpr
 sexpr = do
-  spaces
-  between (char '(' >> spaces) (char ')') $ do
+  list $ do
     first <- optionMaybe identifier
     case first of
       Nothing -> fail "Invalid S-expression"
@@ -127,17 +104,15 @@ sexpr = do
   where
     doApply :: Identifier -> CuderiaParsec SExpr
     doApply first = do
-      spaces
-      args <- many (construct <* spaces)
+      args <- many term
       pure $ Apply (Var first : args)
-    doIf = do
-          spaces
-          cond <- construct
-          spaces
-          body1 <- construct
-          spaces
-          body2 <- construct
-          pure $ If cond body1 body2
+    doLet = Let <$> slist doBinding <*> sexpr
+    doBinding = list $ do
+        name <- identifier
+        value <- term
+        pure (name, value)
+    doLambda = Lambda <$> slist identifier <*> sexpr
+    doIf = If <$> term <*> term <*> term
 
 program :: CuderiaParsec Program
 program = do
