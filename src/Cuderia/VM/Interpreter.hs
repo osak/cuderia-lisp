@@ -42,12 +42,12 @@ data CuderiaError
   | UndefinedVariableError T.Text
   deriving (Show)
 
-data EnvironmentRep = EnvironmentRep {slots :: Array Int Value, vars :: Map.Map T.Text Value, currentError :: Maybe CuderiaError}
+data Environment = Environment {slots :: Array Int Value, vars :: Map.Map T.Text Value, currentError :: Maybe CuderiaError}
 
-newEnvironmentRep :: EnvironmentRep
-newEnvironmentRep = EnvironmentRep (array (0, 1000) []) Map.empty Nothing
+newEnvironment :: Environment
+newEnvironment = Environment (array (0, 1000) []) Map.empty Nothing
 
-newtype Evaluation a = Evaluation {runEvaluation :: EnvironmentRep -> (EnvironmentRep, Maybe a)}
+newtype Evaluation a = Evaluation {runEvaluation :: Environment -> (Environment, Maybe a)}
 
 getSlot :: Int -> Evaluation Value
 getSlot slot = Evaluation $ \rep -> (rep, Just $ slots rep ! slot)
@@ -91,17 +91,17 @@ instance Applicative Evaluation where
   pure a = do return a
   mfab <*> ma = do fab <- mfab; fab <$> ma
 
-newtype Interpreter = Interpreter {environmentRep :: EnvironmentRep}
+newtype Interpreter = Interpreter {environmentRep :: Environment}
 
 newInterpreter :: Interpreter
-newInterpreter = Interpreter newEnvironmentRep
+newInterpreter = Interpreter newEnvironment
 
 runInterpreter :: Interpreter -> Program -> (Interpreter, Either CuderiaError Value)
 runInterpreter ip program = case run of
   Left (rep, err) -> (Interpreter rep, Left err)
   Right (rep, val) -> (Interpreter rep, Right val)
   where
-    run :: Either (EnvironmentRep, CuderiaError) (EnvironmentRep, Value)
+    run :: Either (Environment, CuderiaError) (Environment, Value)
     run =
       foldM
         ( \(rep, _) sexpr -> do
@@ -115,7 +115,7 @@ runInterpreter ip program = case run of
 
 interpret :: SExpr -> Either CuderiaError Value
 interpret sexpr =
-  let (envrep, ret) = runEvaluation (evaluateSExpr sexpr) newEnvironmentRep
+  let (envrep, ret) = runEvaluation (evaluateSExpr sexpr) newEnvironment
    in case currentError envrep of
         Just err -> Left err
         Nothing -> Right $ fromMaybe Nil ret
