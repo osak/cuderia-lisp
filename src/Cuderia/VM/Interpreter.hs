@@ -47,47 +47,47 @@ data EnvironmentRep = EnvironmentRep {slots :: Array Int Value, vars :: Map.Map 
 newEnvironmentRep :: EnvironmentRep
 newEnvironmentRep = EnvironmentRep (array (0, 1000) []) Map.empty Nothing
 
-newtype Environment a = Environment {runEnvironment :: EnvironmentRep -> (EnvironmentRep, Maybe a)}
+newtype Evaluation a = Evaluation {runEvaluation :: EnvironmentRep -> (EnvironmentRep, Maybe a)}
 
-getSlot :: Int -> Environment Value
-getSlot slot = Environment $ \rep -> (rep, Just $ slots rep ! slot)
+getSlot :: Int -> Evaluation Value
+getSlot slot = Evaluation $ \rep -> (rep, Just $ slots rep ! slot)
 
-setSlot :: Int -> Value -> Environment Value
-setSlot slot val = Environment $ \rep -> (rep {slots = slots rep // [(slot, val)]}, Just val)
+setSlot :: Int -> Value -> Evaluation Value
+setSlot slot val = Evaluation $ \rep -> (rep {slots = slots rep // [(slot, val)]}, Just val)
 
-setVar :: T.Text -> Value -> Environment Value
-setVar name val = Environment $ \rep -> (rep {vars = Map.insert name val $ vars rep}, Just val)
+setVar :: T.Text -> Value -> Evaluation Value
+setVar name val = Evaluation $ \rep -> (rep {vars = Map.insert name val $ vars rep}, Just val)
 
-getVar :: T.Text -> Environment Value
-getVar name = Environment $ \rep -> case Map.lookup name (vars rep) of
-  Just val -> runEnvironment (pure val) rep
-  Nothing -> runEnvironment (raise $ UndefinedVariableError $ "Undefined variable " <> name) rep
+getVar :: T.Text -> Evaluation Value
+getVar name = Evaluation $ \rep -> case Map.lookup name (vars rep) of
+  Just val -> runEvaluation (pure val) rep
+  Nothing -> runEvaluation (raise $ UndefinedVariableError $ "Undefined variable " <> name) rep
 
-raise :: CuderiaError -> Environment a
-raise err = Environment $ \rep -> (rep {currentError = Just err}, Nothing)
+raise :: CuderiaError -> Evaluation a
+raise err = Evaluation $ \rep -> (rep {currentError = Just err}, Nothing)
 
-getError :: Environment CuderiaError
-getError = Environment $ \rep -> (rep, currentError rep)
+getError :: Evaluation CuderiaError
+getError = Evaluation $ \rep -> (rep, currentError rep)
 
-runFork :: Environment Value -> Environment Value
-runFork e = Environment $ \rep -> case runEnvironment e rep of
+runFork :: Evaluation Value -> Evaluation Value
+runFork e = Evaluation $ \rep -> case runEvaluation e rep of
   (_, Just x) -> (rep, Just x)
   (new_rep, Nothing) -> (new_rep, Nothing) -- In case of evaluation error, return the updated rep to provide useful context
 
-instance Monad Environment where
-  return a = Environment $ \r -> (r, Just a)
-  a >>= f = Environment $ \r -> case currentError r of
+instance Monad Evaluation where
+  return a = Evaluation $ \r -> (r, Just a)
+  a >>= f = Evaluation $ \r -> case currentError r of
     Just err -> (r, Nothing)
     Nothing ->
-      let (r_1, maybeV) = runEnvironment a r
+      let (r_1, maybeV) = runEvaluation a r
        in case maybeV of
             Nothing -> (r_1, Nothing)
-            Just v -> runEnvironment (f v) r_1
+            Just v -> runEvaluation (f v) r_1
 
-instance Functor Environment where
+instance Functor Evaluation where
   fmap fab ma = do a <- ma; return (fab a)
 
-instance Applicative Environment where
+instance Applicative Evaluation where
   pure a = do return a
   mfab <*> ma = do fab <- mfab; fab <$> ma
 
@@ -105,7 +105,7 @@ runInterpreter ip program = case run of
     run =
       foldM
         ( \(rep, _) sexpr -> do
-            let (newrep, ret) = runEnvironment (evaluateSExpr sexpr) rep
+            let (newrep, ret) = runEvaluation (evaluateSExpr sexpr) rep
             case ret of
               Just x -> Right (newrep, x)
               Nothing -> Left (newrep, fromJust $ currentError newrep)
@@ -115,12 +115,12 @@ runInterpreter ip program = case run of
 
 interpret :: SExpr -> Either CuderiaError Value
 interpret sexpr =
-  let (envrep, ret) = runEnvironment (evaluateSExpr sexpr) newEnvironmentRep
+  let (envrep, ret) = runEvaluation (evaluateSExpr sexpr) newEnvironmentRep
    in case currentError envrep of
         Just err -> Left err
         Nothing -> Right $ fromMaybe Nil ret
 
-foldInts :: (Int -> Int -> Int) -> [Construct] -> Environment Value
+foldInts :: (Int -> Int -> Int) -> [Construct] -> Evaluation Value
 foldInts _ [] = raise $ InvalidInvocationError "At least one operand must be given"
 foldInts f (c : cs) = fmap IntValue result
   where
@@ -140,7 +140,7 @@ foldInts f (c : cs) = fmap IntValue result
         (pure z)
         cs
 
-apply :: Identifier -> [Construct] -> Environment Value
+apply :: Identifier -> [Construct] -> Evaluation Value
 apply ident args = case ident of
   Identifier "+" -> foldInts (+) args
   Identifier "-" -> foldInts (-) args
@@ -158,14 +158,14 @@ apply ident args = case ident of
     pure $ last results
   _ -> undefined
 
-evaluateConstruct :: Construct -> Environment Value
+evaluateConstruct :: Construct -> Evaluation Value
 evaluateConstruct (Integer i) = pure $ IntValue i
 evaluateConstruct (String s) = pure $ StringValue s
 evaluateConstruct (Expr expr) = evaluateSExpr expr
 evaluateConstruct (Var (Identifier name)) = getVar name
 evaluateConstruct _ = raise $ InvalidInvocationError "Not supported"
 
-evaluateSExpr :: SExpr -> Environment Value
+evaluateSExpr :: SExpr -> Evaluation Value
 evaluateSExpr (Apply []) = pure Nil
 evaluateSExpr (Apply (f : args)) = case f of
   Var ident -> apply ident args
