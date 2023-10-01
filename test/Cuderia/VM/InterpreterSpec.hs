@@ -7,7 +7,6 @@ where
 
 import Cuderia.Syntax.Parser
 import Cuderia.VM.Interpreter
-import Cuderia.VM.Interpreter (CuderiaError (TypeMismatchError))
 import Data.Either (fromRight)
 import Data.Text qualified as T
 import Test.Tasty
